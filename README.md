@@ -25,6 +25,7 @@ Este programa foi desenvolvido como parte das atividades práticas da disciplina
   * **Ana** (@)
   * **Ana** (@)
   * **Camille** (@)
+  * **Luana** (@)
 
 -----
 
