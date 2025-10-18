@@ -1,0 +1,47 @@
+# 1. AMBIENTE VIRTUAL (CRUCIAL)
+# Ignora a pasta venv inteira, que contém todos os pacotes instalados.
+venv/
+.venv/
+env/
+/bin/
+/lib/
+/include/
+
+# 2. ARTEFATOS DE SAÍDA DO COLETOR
+# Ignora todos os arquivos e pastas que são gerados pelo script.
+
+# Pasta de logs de execução e logs de resultados (collection_log.csv, error_log.txt)
+logs/
+
+# Pasta de arquivos HTML temporários
+html_pages_temp/
+
+# Pasta de arquivos .zip finalizados
+coletas_compactadas/
+
+
+# 3. ARQUIVOS DE CACHE E BUILD DO PYTHON
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Diretórios de build de pacotes
+dist/
+build/
+*.egg-info/
+
+
+# 4. ARQUIVOS DA IDE (VS CODE)
+# Arquivos de configuração do VS Code que são específicos do usuário.
+.vscode/
+
+# 5. ARQUIVOS DO SISTEMA OPERACIONAL
+# Windows
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# macOS (Se você mover o projeto para Mac)
+.DS_Store
