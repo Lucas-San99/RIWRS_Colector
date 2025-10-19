@@ -44,8 +44,8 @@ Nesta etapa, os alunos entregarão a **primeira versão do relatório**, descrev
 
 ### Critérios de Avaliação
 
-| Peso | Critério | Descrição |
-| :--- | :--- | :--- |
-| **50%** | **Implementação** | Implementação prática da indexação, incluindo: limpeza de dados, transformações (Análise Léxica, remoção de *stopwords*, *stemming*), análise de tempo e espaço para indexação, tamanho do índice e implementação do **Índice Invertido**. |
-| **40%** | **Descrição da Representação** | Relatório parcial da solução com a descrição detalhada das tarefas realizadas. **Clareza é o ponto-chave.** |
-| **10%** | **Descrição dos Próximos Passos** | Apresentação dos próximos passos no formato de **cronograma de conclusão**, incluindo a divisão explícita das tarefas a serem desenvolvidas entre os membros do grupo. |
+| Critério | Descrição |
+| :--- | :--- |
+| **Implementação** | Implementação prática da indexação, incluindo: limpeza de dados, transformações (Análise Léxica, remoção de *stopwords*, *stemming*), análise de tempo e espaço para indexação, tamanho do índice e implementação do **Índice Invertido**. |
+| **Descrição da Representação** | Relatório parcial da solução com a descrição detalhada das tarefas realizadas. **Clareza é o ponto-chave.** |
+| **Descrição dos Próximos Passos** | Apresentação dos próximos passos no formato de **cronograma de conclusão**, incluindo a divisão explícita das tarefas a serem desenvolvidas entre os membros do grupo. |
