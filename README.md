@@ -15,16 +15,17 @@ Este programa foi desenvolvido como parte das atividades práticas da disciplina
 | Detalhe | Informação |
 | :--- | :--- |
 | **Disciplina** | Recuperação de Informação na Web e Redes Sociais |
-| **Professor** | **Dr. Pedro Felipe** |
+| **Professor** | [**Dr. Pedro Felipe**](https://www.linkedin.com/in/pedro-felipe-oliveira-8041ab12/?originalSubdomain=br) |
 | **Motivação** | Praticar a criação e aplicação de coletores de páginas web.  |
 
 ### **Desenvolvedores:**
 
-  * **Lucas Lima** (@)
-  * **Osvaldo** (@)
-  * **Ana** (@)
-  * **Ana** (@)
-  * **Camille** (@)
+* **Ana Clara** (@anacontarini)
+* **Ana Paula** (@)
+* **Camille** (@CamilleIrias)
+* **Luana** (@Luana-Almeid)
+* **Lucas Lima** (@Lucas-San99)
+* **Osvaldo Neto** (@osvaldoferreiraf)
 
 -----
 
