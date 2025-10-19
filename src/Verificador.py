@@ -67,7 +67,7 @@ class Verificador:
             # Captura e formata o erro de Rede ou HTTP (4xx, 5xx)
             error_message = cls.format_error_message(e)
             
-            # --- CHAVE DA CORREÇÃO: Extrair o código de status e logar ---
+            # --- Extrair o código de status e logar ---
             status_code = response.status_code if response is not None else "N/A"
             
             if response is not None and status_code >= 400:
