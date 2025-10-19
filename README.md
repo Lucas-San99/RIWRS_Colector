@@ -1,7 +1,3 @@
-Com certeza. Aqui está o `README.md` final, ajustado com as últimas recomendações para máxima clareza e organização na documentação.
-
------
-
 # Coletor e Analisador de Páginas Web (Phishing)
 
 Este é um projeto modular e robusto desenvolvido para baixar páginas HTML a partir de múltiplas fontes de URLs (CSVs). Ele utiliza o processamento paralelo (`ThreadPoolExecutor`) para alta eficiência, automatiza a desduplicação de URLs e mantém um sistema de logs e relatórios persistente.
