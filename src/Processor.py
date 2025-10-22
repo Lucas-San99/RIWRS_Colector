@@ -78,8 +78,6 @@ def finalize_collection():
         shutil.make_archive(zip_path_final, 'zip', OUTPUT_DIR_TEMP)
         logger.info("\nSucesso!")
         logger.info(f"Arquivo compactado salvo em: {zip_path_final}.zip")
-        logger.info(f"Limpando a pasta temporária '{OUTPUT_DIR_TEMP}'...")
-        shutil.rmtree(OUTPUT_DIR_TEMP)
     except Exception as e:
         logger.error(f"Ocorreu um erro ao compactar os arquivos: {e}")
 
