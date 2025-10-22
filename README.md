@@ -1,6 +1,6 @@
 # Coletor e Analisador de Páginas Web (Phishing)
 
-Este é um projeto modular e robusto desenvolvido para baixar páginas HTML a partir de múltiplas fontes de URLs (CSVs). Ele utiliza o processamento paralelo (`ThreadPoolExecutor`) para alta eficiência, automatiza a desduplicação de URLs e mantém um sistema de logs e relatórios persistente.
+Este é um projeto modular desenvolvido para baixar páginas HTML a partir de múltiplas fontes de URLs (CSVs). Ele utiliza o processamento paralelo (`ThreadPoolExecutor`) para melhor eficiência, automatiza a desduplicação de URLs e mantém um sistema de logs e relatórios persistente.
 
 -----
 
@@ -157,6 +157,18 @@ Agradecemos aos provedores dos conjuntos de dados utilizados:
 
       * **Provedor:** Mohammad A. Jaber (Mendeley)
       * **Fonte:** [Mendeley Data - Phishing Site URLs](https://data.mendeley.com/datasets/vfszbj9b36/1)
+
+### 7\. Assistência de Inteligência Artificial
+
+O desenvolvimento deste projeto utilizou ferramentas de Inteligência Artificial Generativa (Google Gemini) como assistente de programação.
+
+A IA foi empregada nas seguintes tarefas:
+
+1.  **Refatoração e Padronização:** Otimização da estrutura modular do projeto e adequação do código aos padrões de estilo (PEP 8).
+2.  **Debugging e Resolução de Erros:** Análise e sugestão de correções para exceções complexas, como problemas de paralelismo e concorrência no *multithreading*.
+3.  **Documentação:** Auxílio na estruturação e formatação de arquivos de documentação técnica (`README.md`, `.gitignore`, `DELIVERABLES.md`).
+
+A autoria e as decisões de arquitetura e implementação de todas as funcionalidades de coleta e indexação são de responsabilidade dos autores.
 
 <!-- end list -->
 
