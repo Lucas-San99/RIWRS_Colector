@@ -12,6 +12,9 @@ env/
 
 # Pasta de logs de execução e logs de resultados (collection_log.csv, error_log.txt)
 logs/
+logs/collection_log.csv
+!logs/relatorio_erros.csv
+!logs/relatorio_sucessos.csv
 
 
 # Pasta de arquivos HTML temporários
