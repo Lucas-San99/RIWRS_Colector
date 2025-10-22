@@ -11,13 +11,8 @@ env/
 # Ignora todos os arquivos e pastas que são gerados pelo script.
 
 # Pasta de logs de execução e logs de resultados (collection_log.csv, error_log.txt)
-logs/*
-!logs/*.csv
-src/logs/coletor_run_20251021_230846.log
-src/logs/coletor_run_20251021_231621.log
-src/logs/coletor_run_20251021_232205.log
-src/logs/coletor_run_20251021_232705.log
-src/logs/coletor_run_20251021_233156.log
+logs/
+
 
 # Pasta de arquivos HTML temporários
 html_pages_temp/
