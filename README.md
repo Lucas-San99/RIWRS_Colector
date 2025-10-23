@@ -1,10 +1,6 @@
-Com certeza. Aqui está o `README.md` final, ajustado com as últimas recomendações para máxima clareza e organização na documentação.
-
------
-
 # Coletor e Analisador de Páginas Web (Phishing)
 
-Este é um projeto modular e robusto desenvolvido para baixar páginas HTML a partir de múltiplas fontes de URLs (CSVs). Ele utiliza o processamento paralelo (`ThreadPoolExecutor`) para alta eficiência, automatiza a desduplicação de URLs e mantém um sistema de logs e relatórios persistente.
+Este é um projeto modular desenvolvido para baixar páginas HTML a partir de múltiplas fontes de URLs (CSVs). Ele utiliza o processamento paralelo (`ThreadPoolExecutor`) para melhor eficiência, automatiza a desduplicação de URLs e mantém um sistema de logs e relatórios persistente.
 
 -----
 
@@ -15,16 +11,17 @@ Este programa foi desenvolvido como parte das atividades práticas da disciplina
 | Detalhe | Informação |
 | :--- | :--- |
 | **Disciplina** | Recuperação de Informação na Web e Redes Sociais |
-| **Professor** | **Dr. Pedro Felipe** |
+| **Professor** | [**Dr. Pedro Felipe**](https://www.linkedin.com/in/pedro-felipe-oliveira-8041ab12/?originalSubdomain=br) |
 | **Motivação** | Praticar a criação e aplicação de coletores de páginas web.  |
 
 ### **Desenvolvedores:**
 
-  * **Lucas Lima** (@)
-  * **Osvaldo** (@)
-  * **Ana** (@)
-  * **Ana** (@)
-  * **Camille** (@)
+* **Ana Clara** (@anacontarini)
+* **Ana Paula** (@)
+* **Camille** (@CamilleIrias)
+* **Luana** (@Luana-Almeid)
+* **Lucas Lima** (@Lucas-San99)
+* **Osvaldo Neto** (@osvaldoferreiraf)
 
 -----
 
@@ -160,6 +157,18 @@ Agradecemos aos provedores dos conjuntos de dados utilizados:
 
       * **Provedor:** Mohammad A. Jaber (Mendeley)
       * **Fonte:** [Mendeley Data - Phishing Site URLs](https://data.mendeley.com/datasets/vfszbj9b36/1)
+
+### 7\. Assistência de Inteligência Artificial
+
+O desenvolvimento deste projeto utilizou ferramentas de Inteligência Artificial Generativa (Google Gemini) como assistente de programação.
+
+A IA foi empregada nas seguintes tarefas:
+
+1.  **Refatoração e Padronização:** Otimização da estrutura modular do projeto e adequação do código aos padrões de estilo (PEP 8).
+2.  **Debugging e Resolução de Erros:** Análise e sugestão de correções para exceções complexas, como problemas de paralelismo e concorrência no *multithreading*.
+3.  **Documentação:** Auxílio na estruturação e formatação de arquivos de documentação técnica (`README.md`, `.gitignore`, `DELIVERABLES.md`).
+
+A autoria e as decisões de arquitetura e implementação de todas as funcionalidades de coleta e indexação são de responsabilidade dos autores.
 
 <!-- end list -->
 
