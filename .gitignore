@@ -12,6 +12,10 @@ env/
 
 # Pasta de logs de execução e logs de resultados (collection_log.csv, error_log.txt)
 logs/
+logs/collection_log.csv
+!logs/relatorio_erros.csv
+!logs/relatorio_sucessos.csv
+
 
 # Pasta de arquivos HTML temporários
 html_pages_temp/
@@ -43,5 +47,9 @@ ehthumbs.db
 desktop.ini
 $RECYCLE.BIN/
 
+# 6. Páginas html compactadas
+html_pages_temp.7z
+
 # macOS (Se você mover o projeto para Mac)
 .DS_Store
+

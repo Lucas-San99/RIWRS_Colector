@@ -22,7 +22,7 @@ logger = setup_logging()
 # 2. CONFIGURAÇÕES PRINCIPAIS
 # ==============================================================================
 
-# --- Caminhos e Arquivos (Ajustados para a estrutura modular) ---
+# --- Caminhos e Arquivos ---
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
 URL_COLUMN_NAME = 'URL'
 
@@ -36,7 +36,7 @@ LOG_FILE = os.path.join(LOG_DIR_OUTPUT, 'collection_log.csv')
 ERROR_LOG_FILE = os.path.join(LOG_DIR_OUTPUT, 'error_log.txt') 
 
 # Configurando caminho para os datasets
-DATASETS_DIR = 'E:/Documentos/RIWRS_2/RIWRS/TP-Coletor/datasets'
+DATASETS_DIR = 'E:/Documentos/RIWRS_2/datasets'
 URL_FILES = [
     os.path.join(DATASETS_DIR, 'taruntiwarihp_dataset.csv'),
     os.path.join(DATASETS_DIR, 'mendeley_dataset.csv')
@@ -76,12 +76,10 @@ def finalize_collection():
     
     try:
         shutil.make_archive(zip_path_final, 'zip', OUTPUT_DIR_TEMP)
-        logger.info("\n✅ Sucesso!")
+        logger.info("\nSucesso!")
         logger.info(f"Arquivo compactado salvo em: {zip_path_final}.zip")
-        logger.info(f"Limpando a pasta temporária '{OUTPUT_DIR_TEMP}'...")
-        shutil.rmtree(OUTPUT_DIR_TEMP)
     except Exception as e:
-        logger.error(f"❌ Ocorreu um erro ao compactar os arquivos: {e}")
+        logger.error(f"Ocorreu um erro ao compactar os arquivos: {e}")
 
 # ==============================================================================
 # 4. FUNÇÃO PRINCIPAL (ORQUESTRADOR DA COLETA)
@@ -163,7 +161,6 @@ def main():
     return True, urls_to_collect
 
 def print_summary(total, completed, remaining):
-    # ... (o corpo da função permanece o mesmo) ...
     logger.info("-" * 50)
     logger.info(f"Resumo da Tarefa:")
     logger.info(f"Total de URLs na fonte: {total}")
@@ -209,5 +206,3 @@ def run_post_processing(collection_successful, attempted_urls):
 
         # Chama a função de finalização (compactar e salvar/limpar).
         finalize_collection()
-
-# NOTA: O bloco if __name__ == '__main__': FOI REMOVIDO DESTE ARQUIVO.
