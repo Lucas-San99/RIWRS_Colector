@@ -1,8 +1,4 @@
-Aqui está o `README.md` final, com todas as atualizações de autoria, o link para o professor, a padronização dos nomes de *usernames*, e a inclusão da seção sobre assistência de IA, tudo formatado em Markdown e sem emojis.
-
------
-
-# 🌐 Coletor e Analisador de Páginas Web (Phishing)
+# Coletor e Analisador de Páginas Web (Phishing)
 
 Este é um projeto modular e robusto desenvolvido para baixar páginas HTML a partir de múltiplas fontes de URLs (CSVs). Ele utiliza o processamento paralelo (`ThreadPoolExecutor`) para melhor eficiência, automatiza a desduplicação de URLs e mantém um sistema de logs e relatórios persistente.
 
