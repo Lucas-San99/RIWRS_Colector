@@ -1,4 +1,4 @@
-# Relatório Parcial do Projeto: Etapa 2 - Representação e Indexação
+Etapa 2 - Representação e Indexação
 
 Este documento é a continuação do Relatório da Etapa 1 e detalha a implementação da fase de Representação e Indexação (Parte 2 do projeto).
 
@@ -14,7 +14,7 @@ A **Etapa 1 (Coleta)** foi concluída com sucesso, resultando na aquisição de 
 
 -----
 
-## 2\. Decisão da Arquitetura de Representação (Justificativa)
+## 2\. Decisão da Arquitetura de Representação
 
 O objetivo principal desta etapa é criar uma estrutura que permita buscas rápidas e o cálculo de relevância (ranking).
 
@@ -87,7 +87,7 @@ Este mecanismo permite ao sistema ranquear os documentos: uma página onde 'log'
 
 A indexação é realizada pelo módulo **`src/Indexador.py`**, que aplica uma série de transformações nos documentos HTML.
 
-### 3.1. Pipeline de Análise Léxica (Critério: Transformações)
+### 3.1. Pipeline de Análise Léxica
 
 Para garantir que a indexação seja linguística e não apenas literal, foi aplicado um *pipeline* robusto para a língua portuguesa:
 
@@ -98,16 +98,37 @@ Para garantir que a indexação seja linguística e não apenas literal, foi apl
 | **3. Remoção de Stopwords** | NLTK (Lista do Português) | Elimina termos de alta frequência e baixa relevância para a busca (e.g., "o", "de", "que"). |
 | **4. Stemming** | NLTK (`SnowballStemmer('portuguese')`) | Reduz as palavras à sua raiz comum (e.g., "coletar," "coletando" $\rightarrow$ "colet"). Essencial para aumentar o *recall* do sistema. |
 
-### 3.2. Robustez e Consistência (Critério: Limpeza de Dados)
+### 3.2. Robustez e Consistência
 
 Foi implementado um mecanismo de filtro para lidar com a inconsistência entre o log e o disco, causada pela natureza volátil das páginas e ações do *antivírus* (que deleta arquivos suspeitos mesmo quando ele é desativado).
 
   * **Mecanismo:** Antes do *loop* de indexação, o `Indexador` compara o campo `saved_filename` do log com o conteúdo da pasta `html_pages_temp` (`os.listdir`).
   * **Ação:** O sistema **ignora** os arquivos faltantes (logging o total de *91 documentos faltantes*), mas continua a indexar os documentos **disponíveis**. Isso garante que a indexação não seja interrompida por erros de I/O (`[Errno 2]`) e utilize o máximo de dados possível. Isso foi necessário porque a planilha csv mestre **collection_loc.csv** (em `.\logs`) armazena todos os resultados da coleta, sendo ele `error` ou `success`. Porém quando cruzamos os dados da planilha com os arquivos html gerados conseguimos reduzir o tempo de análise e a ocorrencia de erros I/O do `Indexador`. 
 
+## 3.3. Análise Empírica da Escala e Eficiência
+
+O teste de indexação do *corpus* completo confirmou a robustez da solução e forneceu métricas cruciais de escala e eficiência:
+
+| Métrica de Saída | Valor | Análise |
+| :--- | :--- | :--- |
+| **Duração da Coleta (Multithreading)** | **78 Horas (Aproximadamente)** | Etapa 1 |
+| **Tempo Total de Indexação** | **15 Horas (Aproximadamente)** | Reforça a necessidade da solução modular: uma tarefa que durou 15 horas *deve* ser isolada do processo de coleta volátil. |
+| **Tamanho do Índice Invertido** | 4.606.014 KB (**~4.6 GB**) | Confirma a complexidade léxica do *corpus* e o volume de *postings* (entradas DocID:TF). |
+| **Tamanho do Mapa de Documentos** | 20.436 KB (**~20 MB**) | Demonstra que o *overhead* para mapear URLs originais é insignificante em comparação com o índice de termos. |
+| **Total de Documentos Processados** | 297.068 | Atingido o requisito de volume de dados. |
+
+> O teste de indexação confirmou a robustez da solução, mas a métrica de tempo de coleta validou a importância da arquitetura paralela:
+>
+> 1.  **Duração da Coleta:** O processo de de analise das URL e coleta das **297.068 URLs ativas levou aproximadamente 78 horas** (3 dias e 6 horas) utilizando 15 *workers* paralelos. Este tempo extenso, mesmo com concorrência, é um reflexo direto da alta latência e da inatividade de 77% dos *links* de *phishing* no *corpus*.
+> 2.  **Duração da Indexação:** O processamento léxico e a construção do índice levaram **15 horas** (como uma tarefa *CPU/I/O-bound*).
+>
+> O tempo gasto representa o massivo uso do **`ThreadPoolExecutor`** recomendado pelo professor Pedro Felipe. Em um processo sequencial, a coleta teria levado centenas de horas. Além disso, a longa duração reforça a decisão de usar *logging* persistente e a estrutura modular, garantindo que nenhum *state* fosse perdido durante um ciclo de execução tão longo e possibilitasse que errors fossem visualizados em realtime possibilitando uma parada no processo para eventuais correções no código.
+>
+> O **tamanho massivo do `indice_invertido.json` (aproximadamente 4.6 GB)** é um resultado final que confirma a complexidade e a profundidade do *corpus* que será utilizado na fase de Recuperação (Entrega 3).
+
 -----
 
-## 4\. Próximos Passos (Entrega 3: Recuperação)
+## 4\. Próximos Passos
 
 A próxima fase se concentrará em utilizar o índice gerado para implementar a funcionalidade de recuperação.
 
@@ -120,47 +141,11 @@ A próxima fase se concentrará em utilizar o índice gerado para implementar a 
 | **Mapeamento de Resultados** | Lucas Lima | Criar a função que, dado um `DocID`, utiliza o arquivo **`document_map.json`** para retornar a **URL original** correspondente para exibição ao usuário. | 2 dias |
 | **Interface CLI Básica (Frontend)** | Ana Clara | Estruturar a interface de linha de comando (CLI) simples que recebe a *query* do usuário e chama a função de busca. | 3 dias |
 
-## Diagrama de Fluxo: Sistema de Recuperação (Etapa 3)
+## Diagrama de Fluxo: Sistema de Recuperação (Esperado Etapa 3)
 
 Este diagrama representa o caminho da informação (fluxo de dados) quando um usuário insere uma consulta no sistema.
 
-### [MERMAID DIAGRAM]
-
-```mermaid
-graph TD
-    A[Usuário: Insere Consulta] --> B{Processamento da Consulta};
-    
-    subgraph Módulo de Análise Léxica
-        B --> C[Tokenização, Stopwords, Stemming (Funções do Indexador)];
-        C --> D[Cálculo de Vetor de Consulta];
-    end
-
-    D --> E{Consulta Vetorizada (TF-IDF)};
-    
-    subgraph Motor de Busca (Ranking)
-        E --> F[Busca no Índice Invertido.json];
-        F --> G[Cálculo do Peso IDF (Global)];
-        G --> H[Cálculo da Similaridade do Cosseno];
-    end
-
-    H --> I[Ranqueamento dos DocIDs por Score];
-    
-    I --> J[Mapeamento de DocID para URL];
-    
-    J -- Consulta document_map.json --> K[RESULTADOS: 10 URLs Ranqueadas];
-    
-    style A fill:#DDEEFF,stroke:#333;
-    style B fill:#F9F,stroke:#333;
-    style C fill:#FFFFE0,stroke:#333;
-    style D fill:#FFFFE0,stroke:#333;
-    style E fill:#ADD8E6,stroke:#333;
-    style F fill:#ADD8E6,stroke:#333;
-    style G fill:#F0F0FF,stroke:#333;
-    style H fill:#ADD8E6,stroke:#333;
-    style I fill:#ADD8E6,stroke:#333;
-    style J fill:#FFFFE0,stroke:#333;
-    style K fill:#90EE90,stroke:#333;
-```
+![Diagrama de fluxo do sistema de Recuperação de Informação (Etapa 3). O fluxo começa com 'Usuário: Insere Consulta' e entra no 'Módulo de Análise Léxica', onde a consulta é processada (tokenização, stemming) para gerar o 'Cálculo de Vetor de Consulta'. O vetor é passado para o 'Motor de Busca (Ranking)', onde é feita a 'Busca no Índice Invertido.json'. Em seguida, são realizados o 'Cálculo do Peso IDF - Global' e o 'Cálculo da Similaridade do Cosseno' para ranquear os documentos. O processo finaliza com o 'Mapeamento de DocID para URL' e a exibição dos 'RESULTADOS: 10 URLs Ranqueadas'.](/images/Diagrama_esperado_para_etapa_3.png)
 
 ### Explicação do Fluxo:
 
@@ -170,3 +155,13 @@ graph TD
 4.  **Busca (`F`):** O sistema usa o `indice_invertido.json` para encontrar todos os documentos que contêm os termos da consulta.
 5.  **Ranking (`G`, `H`, `I`):** Para os documentos encontrados, o sistema calcula o peso **IDF** e aplica a **Similaridade do Cosseno** para gerar um *score* de relevância.
 6.  **Mapeamento (`J`, `K`):** Os `DocID`s ranqueados são convertidos de volta para as URLs originais usando o `document_map.json` para exibição final.
+
+----
+
+### Conclusões sobre a Implementação
+
+A implementação da estrutura de Representação se mostrou bastante escalável, mas intensiva em uso de CPU e I/O:
+
+1.  O tamanho massivo do **`indice_invertido.json` (aproximadamente 4.6 GB)** é um resultado direto da alta complexidade léxica dos *websites* de *phishing* e do grande volume de documentos. Isso confirma que a indexação está densa e detalhada, pronta para gerar *features* robustas. Quanto à **Eficiência (I/O e Processamento)**, a longa duração de **15 horas** (principalmente devido à leitura e processamento de I/O e aos algoritmos de *stemming* e tokenização) justifica plenamente:
+    * **Otimização:** A necessidade da otimização que implementamos para **filtrar arquivos faltantes em memória**, evitando que 15 horas de processamento fossem perdidas por falhas de I/O em apenas 91 documentos.
+    * **Arquitetura:** A separação do Indexador como uma etapa **manual/separada** no *launcher* (`Coletor.py`) foi essencial para que o processo pudesse ser executado em um bloco de tempo dedicado e monitorado.

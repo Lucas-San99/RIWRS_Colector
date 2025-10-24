@@ -73,40 +73,4 @@ O diagrama de fluxo de trabalho mostra o caminho dos dados, desde a entrada em C
 
 ### 5.1. Desenho do Fluxo
 
-```mermaid
-graph TD
-    subgraph Fase 1: Inicialização
-        A[Coletor.py (Launcher)] --> B(Inicializa Logger e sys.path);
-        B --> C[processador.py: main()];
-    end
-
-    subgraph Fase 2: Preparação de Dados (Processador)
-        C --> D[Leitura CSVs & Concatenação];
-        D --> E[Desduplicação (URLs Únicas)];
-        E --> F[Filtro: Ignora URLs já Coletadas];
-        F --> G{Lista Final de URLs};
-    end
-
-    subgraph Fase 3: Coleta Paralela (I/O Bound)
-        G --> H[ThreadPoolExecutor (MAX_WORKERS)];
-        H --> I(Worker N: Verificador.download_url);
-        I -- Sucesso (Status 2xx) --> J[Salva Arquivo em html_pages_temp/];
-        I -- Falha (Status 4xx/Timeout) --> K[Não Salva Arquivo];
-        K --> L[Loga ERROR/CRITICAL em coletor_run_*.log];
-        J --> L;
-        J --> M[Registra Linha no logs/collection_log.csv];
-        K --> M;
-    end
-    
-    subgraph Fase 4: Pós-Processamento e Finalização
-        M --> N[GeradorRelatorio];
-        N --> O[Cria relatorio_erros.csv];
-        O --> P[finalize_collection];
-        P --> Q[Compacta html_pages_temp/ para coletas_compactadas/*.zip];
-        Q --> R[Limpa Pasta Temporária (shutil.rmtree)];
-    end
-```
-
-### 5.2. Espaço para Inserção de Imagem
-
 ![Fluxograma técnico detalhando o processo do Coletor Web Modular, apresentando quatro fases distintas: inicialização do sistema, preparação dos dados, coleta paralela com threads, e pós-processamento. O diagrama usa conectores e caixas em tons neutros para mostrar a sequência lógica das operações, desde a entrada dos dados até a compactação final dos arquivos HTML coletados](./images/fluxo_previsto.png)
