@@ -1,10 +1,14 @@
-# Coletor e Analisador de Páginas Web (Phishing)
-
-Este é um projeto modular desenvolvido para baixar páginas HTML a partir de múltiplas fontes de URLs (CSVs). Ele utiliza o processamento paralelo (`ThreadPoolExecutor`) para melhor eficiência, automatiza a desduplicação de URLs e mantém um sistema de logs e relatórios persistente.
+Aqui está o `README.md` final, com todas as atualizações de autoria, o link para o professor, a padronização dos nomes de *usernames*, e a inclusão da seção sobre assistência de IA, tudo formatado em Markdown e sem emojis.
 
 -----
 
-## 1. Autoria e Contexto Acadêmico
+# 🌐 Coletor e Analisador de Páginas Web (Phishing)
+
+Este é um projeto modular e robusto desenvolvido para baixar páginas HTML a partir de múltiplas fontes de URLs (CSVs). Ele utiliza o processamento paralelo (`ThreadPoolExecutor`) para melhor eficiência, automatiza a desduplicação de URLs e mantém um sistema de logs e relatórios persistente.
+
+-----
+
+## 1\. Autoria e Contexto Acadêmico
 
 Este programa foi desenvolvido como parte das atividades práticas da disciplina de **Recuperação de Informação na Web e Redes Sociais**.
 
@@ -12,20 +16,20 @@ Este programa foi desenvolvido como parte das atividades práticas da disciplina
 | :--- | :--- |
 | **Disciplina** | Recuperação de Informação na Web e Redes Sociais |
 | **Professor** | [**Dr. Pedro Felipe**](https://www.linkedin.com/in/pedro-felipe-oliveira-8041ab12/?originalSubdomain=br) |
-| **Motivação** | Praticar a criação e aplicação de coletores de páginas web.  |
+| **Motivação** | Praticar a criação e aplicação de coletores de páginas web. |
 
 ### **Desenvolvedores:**
 
-* **Ana Clara** (@anacontarini)
-* **Ana Paula** (@)
-* **Camille** (@CamilleIrias)
-* **Luana** (@Luana-Almeid)
-* **Lucas Lima** (@Lucas-San99)
-* **Osvaldo Neto** (@osvaldoferreiraf)
+  * **Ana Clara** (@anacontarini)
+  * **Ana Paula** (@apoliveirapuc)
+  * **Camille** (@CamilleIrias)
+  * **Luana** (@Luana-Almeid)
+  * **Lucas Lima** (@Lucas-San99)
+  * **Osvaldo Neto** (@osvaldoferreiraf)
 
 -----
 
-## 2. Configuração Inicial do Ambiente
+## 2\. Configuração Inicial do Ambiente
 
 ### 2.1. Instalação do Python 3
 
@@ -35,31 +39,47 @@ Este programa foi desenvolvido como parte das atividades práticas da disciplina
 | **macOS** | Use o Homebrew: `brew install python` |
 | **Linux** | Use o gerenciador de pacotes: `sudo apt update && sudo apt install python3 python3-pip` |
 
-### 2.2. Criação e Ativação do Ambiente Virtual (Obrigatório)
+### 2.2. Automação da Configuração (Windows)
 
-Execute estes comandos na pasta raiz do projeto (`TP-Coletor/`):
+No Windows, o arquivo `setup.bat` automatiza a criação do ambiente virtual e a instalação de todas as dependências necessárias, incluindo `pandas`, `requests`, `nltk` e `beautifulsoup4`.
+
+**CRÍTICO:** Você deve executar o `setup.bat` na pasta raiz do projeto (`TP-Coletor/`).
 
 ```bash
-# 1. Cria o ambiente virtual
+# 1. Execute o script de configuração
+.\setup.bat
+
+# 2. O script irá criar o venv e instalar as dependências.
+#    Após o setup, você precisará ATIVAR o ambiente para rodar o Coletor.py.
+```
+
+### 2.3. Criação e Ativação do Ambiente Virtual (Manual para Outros SOs / Pós-Setup)
+
+Se estiver em Linux/macOS ou se o `.bat` não ativou o ambiente em seu terminal:
+
+```bash
+# Cria o ambiente virtual (Se não foi feito pelo .bat)
 python3 -m venv venv 
 
-# 2. Ativa o ambiente (Windows)
+# Ativa o ambiente (Windows)
 .\venv\Scripts\activate
-# 2. Ativa o ambiente (Linux/macOS)
+# Ativa o ambiente (Linux/macOS)
 # source venv/bin/activate
 ```
 
-### 2.3. Instalação das Dependências
+### 2.4. Instalação das Dependências
+
+*(Esta seção se torna redundante no Windows se o .bat for usado, mas é mantida para Linux/macOS ou se o usuário quiser verificar)*
 
 Com o ambiente ativado, instale as bibliotecas necessárias:
 
 ```bash
-pip install pandas requests tqdm
+# Use este comando apenas se o setup.bat não foi executado ou falhou:
+pip install pandas requests tqdm nltk beautifulsoup4
 ```
-
 -----
 
-## 3. Estrutura e Modularidade do Projeto
+## 3\. Estrutura e Modularidade do Projeto
 
 O projeto adota uma estrutura profissional com o código-fonte principal isolado na pasta `src/`.
 
@@ -68,16 +88,18 @@ O projeto adota uma estrutura profissional com o código-fonte principal isolado
 ```
 TP-Coletor/
 ├── Coletor.py           <-- ARQUIVO DE EXECUÇÃO (Launcher)
-├── venv/
+├── venv/                # Ignorado no .gitignore
 ├── datasets/            # Pasta OBRIGATÓRIA com os CSVs de origem
 ├── logs/                # Pasta de saída para logs e relatórios CSV
 ├── src/                 # Diretório do código-fonte (pacote)
 │   ├── __init__.py
-│   ├── processador.py   <-- Lógica principal (onde a orquestração ocorre)
+│   ├── processador.py   <-- Lógica principal (orquestração)
 │   ├── Verificador.py   <-- Classe de Download
 │   ├── Relatorio.py     <-- Classe de Geração de Relatórios
 │   └── Logging.py       <-- Configuração do Logger
+|   |__ Indexador.py     <-- Indexação dos indices invertidos e representação dos dados
 └── README.md
+|__ .gitignore
 ```
 
 ### 3.2. Funções dos Módulos
@@ -91,13 +113,13 @@ TP-Coletor/
 
 -----
 
-## 4. Configuração Necessária
+## 4\. Configuração Necessária
 
 As configurações são definidas no arquivo **`src/processador.py`**.
 
 ### 4.1. Ajuste de Caminhos (`DATASETS_DIR`)
 
-O módulo `processador.py` calcula automaticamente a raiz do projeto. No entanto, você deve garantir que o caminho absoluto para a pasta `datasets` esteja correto.
+Você **DEVE** ajustar o caminho absoluto para sua pasta de dados:
 
 ```python
 # NO ARQUIVO: src/processador.py
@@ -119,7 +141,7 @@ DATASETS_DIR = r'E:\Documentos\RIWRS_2\RIWRS\TP-Coletor\datasets'
 
 -----
 
-## 5. Execução e Acompanhamento de Logs
+## 5\. Execução e Acompanhamento de Logs
 
 ### 5.1. Execução
 
@@ -144,7 +166,9 @@ Todos os arquivos de saída (logs de execução e relatórios de resultados) sã
 
 -----
 
-## 6\. Agradecimentos (Dataset Providers)
+## 6\. Agradecimentos e Assistência Técnica
+
+### 6.1. Agradecimentos (Dataset Providers)
 
 Agradecemos aos provedores dos conjuntos de dados utilizados:
 
@@ -158,7 +182,7 @@ Agradecemos aos provedores dos conjuntos de dados utilizados:
       * **Provedor:** Mohammad A. Jaber (Mendeley)
       * **Fonte:** [Mendeley Data - Phishing Site URLs](https://data.mendeley.com/datasets/vfszbj9b36/1)
 
-### 7\. Assistência de Inteligência Artificial
+### 6.2. Assistência de Inteligência Artificial
 
 O desenvolvimento deste projeto utilizou ferramentas de Inteligência Artificial Generativa (Google Gemini) como assistente de programação.
 
@@ -169,8 +193,3 @@ A IA foi empregada nas seguintes tarefas:
 3.  **Documentação:** Auxílio na estruturação e formatação de arquivos de documentação técnica (`README.md`, `.gitignore`, `DELIVERABLES.md`).
 
 A autoria e as decisões de arquitetura e implementação de todas as funcionalidades de coleta e indexação são de responsabilidade dos autores.
-
-<!-- end list -->
-
-```
-```
