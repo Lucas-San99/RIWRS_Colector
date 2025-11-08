@@ -1,9 +1,11 @@
 # ==============================================================================
-# Script auxiliar para verificar o total de URLs coletadas.
+# Script auxiliar para diagnóstico (Health Check) do sistema.
 # ==============================================================================
 import os
 import sys
+import json
 import pandas as pd
+from Config import LOG_DIR_OUTPUT, get_log_file_path
 
 # 1. Configurar o Python Path (CRUCIAL se estiver na raiz)
 # Se este arquivo estiver na RAIZ, precisamos configurar o caminho para 'src'
@@ -14,7 +16,7 @@ if SRC_DIR not in sys.path:
 
 # 2. Importar o logger (opcional, mas recomendado para formatar a saída)
 try:
-    from Logging import setup_logging
+    from Logging import setup_logging, get_log_file
     # Inicializa o logger para esta execução
     logger = setup_logging()
 except ImportError:
@@ -24,52 +26,89 @@ except ImportError:
     logger = type('Logger', (object,), {'info': logger_info})()
 
 
-def contar_paginas_coletadas():
-    # 1. Obtém o diretório ONDE O SCRIPT ESTÁ RODANDO (E:\Documentos\RIWRS_2\src)
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+def health_check_sistema():
+    """
+    Executa uma verificação completa (Health Check) do estado do sistema,
+    analisando os artefatos da coleta, indexação e cálculo de IDF.
+    """
+    logger.info("-" * 50)
+    logger.info("INICIANDO HEALTH CHECK DO SISTEMA DE RI")
+    logger.info("-" * 50)
+
+    # --- 1. Verificação da Coleta (collection_log.csv) ---
+    log_file_path = get_log_file_path('collection_log.csv')
+    logger.info(f"1. Verificando log de coleta: {log_file_path}")
     
-    # 2. Sobe um nível para encontrar a RAIZ do projeto (E:\Documentos\RIWRS_2\)
-    BASE_PATH = os.path.dirname(SCRIPT_DIR)
-    
-    # 3. Usa o BASE_PATH para construir o caminho correto para a pasta logs
-    LOG_DIR_OUTPUT = os.path.join(BASE_PATH, 'logs')
-    LOG_FILE = os.path.join(LOG_DIR_OUTPUT, 'collection_log.csv')
+    if not os.path.exists(log_file_path):
+        logger.warning("Arquivo de log da coleta (collection_log.csv) não encontrado. Pule para a próxima verificação.")
+    else:
+        try:
+            df_log = pd.read_csv(log_file_path, on_bad_lines='skip', low_memory=False)
+            total_entradas = len(df_log)
+            df_success = df_log[df_log['status'].str.startswith('SUCCESS', na=False)]
+            total_coletado_unico = df_success['original_url'].nunique()
+            
+            logger.info(f"   - Total de tentativas de coleta registradas: {total_entradas}")
+            logger.info(f"   - URLs únicas coletadas com sucesso: {total_coletado_unico}")
+        except Exception as e:
+            logger.error(f"   - ERRO CRÍTICO ao processar o log de coleta: {e}")
 
-    logger.info("-" * 40)
-    logger.info(f"Verificando log em: {LOG_FILE}")
-    
-    if not os.path.exists(LOG_FILE):
-        logger.info("AVISO: Arquivo de log mestre (collection_log.csv) não encontrado.")
-        return 0
+    # --- 2. Verificação dos Artefatos de Indexação e IDF ---
+    artefatos = {
+        "Mapa de Documentos": "document_map.json",
+        "Índice Invertido": "indice_invertido.json",
+        "Pesos IDF": "idf.json"
+    }
 
-    try:
-        # 1. Carrega todo o log
-        # Use low_memory=False para lidar com grandes arquivos CSV
-        df_log = pd.read_csv(LOG_FILE, on_bad_lines='skip', low_memory=False)
-        
-        # 2. Conta o total de entradas no log
-        total_entradas = len(df_log)
+    for nome_artefato, nome_arquivo in artefatos.items():
+        logger.info(f"\n2.{list(artefatos.keys()).index(nome_artefato) + 1}. Verificando Artefato: {nome_artefato}")
+        caminho_arquivo = get_log_file_path(nome_arquivo)
+        if not os.path.exists(caminho_arquivo):
+            logger.warning(f"   - ARQUIVO NÃO ENCONTRADO: {caminho_arquivo}")
+            logger.warning(f"   - Execute a etapa correspondente para gerá-lo (Indexação ou Cálculo de IDF).")
+            continue
 
-        # 3. Filtra as entradas que começam com 'SUCCESS'
-        # Usa na=False para garantir que strings vazias ou NaN sejam ignoradas no filtro
-        df_success = df_log[df_log['status'].str.startswith('SUCCESS', na=False)]
-        
-        # 4. Filtra as entradas que começam com 'ERROR'
-        df_error = df_log[df_log['status'].str.startswith('ERROR', na=True)]
+        try:
+            tamanho_bytes = os.path.getsize(caminho_arquivo)
+            tamanho_mb = tamanho_bytes / (1024 * 1024)
+            logger.info(f"   - Arquivo encontrado: {caminho_arquivo}")
+            logger.info(f"   - Tamanho: {tamanho_mb:.2f} MB")
 
-        # 5. Conta as URLs únicas (nunique) para evitar contagem de duplicação por erro
-        total_coletado_unico = df_success['original_url']
-        
-        logger.info(f"TOTAL DE TENTATIVAS REGISTRADAS (linhas no CSV): {total_entradas}")
-        logger.info(f"URLs ÚNICAS COLETADAS COM SUCESSO: {total_coletado_unico}")
-        logger.info(f"STATUS DE SUCESSO ENCONTRADO: {len(df_success)} entradas.")
-        logger.info(f"TOTAL DE ERROS ENCONTRADOS E STATUS DESCONHECIDO: {len(df_error)} entradas.")
-        logger.info("-" * 40)
-        return total_coletado_unico
-        
-    except Exception as e:
-        logger.info(f"ERRO CRÍTICO ao processar o log: {e}")
-        return 0
+            # Adiciona estatísticas específicas para cada arquivo
+            if nome_arquivo in ["document_map.json", "idf.json"]:
+                with open(caminho_arquivo, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    num_entradas = len(data)
+                    if nome_arquivo == "document_map.json":
+                        logger.info(f"   - Total de documentos mapeados: {num_entradas}")
+                    else: # idf.json
+                        logger.info(f"   - Total de termos no vocabulário (com IDF): {num_entradas}")
+
+            # --- Verificação específica para o Índice Invertido (usando ijson para arquivos grandes) ---
+            elif nome_arquivo == "indice_invertido.json":
+                try:
+                    import ijson
+                    logger.info("   - Analisando o número de termos (pode levar um tempo)...")
+                    num_termos = 0
+                    with open(caminho_arquivo, 'rb') as f: # ijson prefere modo binário
+                        # Itera sobre as chaves do objeto raiz sem carregar os valores
+                        for _ in ijson.kvitems(f, ''):
+                            num_termos += 1
+                    logger.info(f"   - Total de termos únicos no vocabulário: {num_termos}")
+                except ImportError:
+                    logger.warning("   - A biblioteca 'ijson' não está instalada. Não é possível contar os termos.")
+                    logger.warning("   - Instale com: pip install ijson")
+                except Exception as e:
+                    logger.error(f"   - ERRO ao analisar o índice com ijson: {e}")
+
+        except json.JSONDecodeError:
+            logger.error(f"   - ERRO: O arquivo '{nome_arquivo}' está corrompido (não é um JSON válido).")
+        except Exception as e:
+            logger.error(f"   - ERRO ao analisar o arquivo '{nome_arquivo}': {e}")
+
+    logger.info("-" * 50)
+    logger.info("HEALTH CHECK FINALIZADO")
+    logger.info("-" * 50)
 
 if __name__ == '__main__':
-    contar_paginas_coletadas()
+    health_check_sistema()
