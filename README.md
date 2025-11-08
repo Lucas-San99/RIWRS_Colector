@@ -88,31 +88,42 @@ O projeto adota uma estrutura profissional com o código-fonte principal isolado
 
 ### 3.1. Estrutura de Diretórios
 
-```
-TP-Coletor/
+```diff
+RIWRS_2/
 ├── Coletor.py           <-- ARQUIVO DE EXECUÇÃO (Launcher)
+├── setup.bat            <-- Script de instalação para Windows
 ├── venv/                # Ignorado no .gitignore
 ├── datasets/            # Pasta OBRIGATÓRIA com os CSVs de origem
-├── logs/                # Pasta de saída para logs e relatórios CSV
+├── logs/                # Pasta de saída para logs e artefatos (índices, IDFs)
+├── html_pages_temp/     # Armazenamento temporário de HTMLs baixados
+├── coletas_compactadas/ # Arquivos .zip com as coletas finalizadas
 ├── src/                 # Diretório do código-fonte (pacote)
-│   ├── __init__.py
-│   ├── processador.py   <-- Lógica principal (orquestração)
-│   ├── Verificador.py   <-- Classe de Download
-│   ├── Relatorio.py     <-- Classe de Geração de Relatórios
-│   └── Logging.py       <-- Configuração do Logger
-|   |__ Indexador.py     <-- Indexação dos indices invertidos e representação dos dados
+│   ├── Config.py        <-- Configurações centralizadas (caminhos)
+│   ├── Logging.py       <-- Configuração do Logger
+│   ├── Verificador.py   <-- Lógica de Download de URL
+│   ├── Processor.py     <-- Orquestrador da Coleta (Etapa 1)
+│   ├── Indexador.py     <-- Representação e Indexação (Etapa 2)
+│   ├── CalculaIDF.py    <-- Cálculo de IDF (Etapa 3)
+│   ├── SearchEngine.py  <-- Motor de Busca (Etapa 4)
+│   ├── Diagnostico.py   <-- Ferramenta de "Health Check" do sistema
+│   └── Relatorio.py     <-- Geração de relatórios de coleta
 └── README.md
-|__ .gitignore
 ```
 
 ### 3.2. Funções dos Módulos
 
 | Arquivo/Classe | Responsabilidade Principal |
 | :--- | :--- |
-| **`Coletor.py`** | Ponto de entrada (Launcher). Inicializa o ambiente e chama a lógica de `src/`. |
-| **`src/processador.py`** | Orquestração, leitura de dados, desduplicação e controle do ciclo de coleta. |
-| **`src/Verificador.py`** | Lógica de **Download** de URL e registro de erros de Status HTTP (4xx, 5xx) em tempo real. |
+| **`Coletor.py`** | Ponto de entrada (Launcher). Orquestra a execução das etapas através de um menu interativo ou argumentos de linha de comando. |
+| **`src/Config.py`** | Centraliza todos os caminhos de pastas (`logs`, `datasets`, etc.) para fácil manutenção. |
+| **`src/Processor.py`** | **Etapa 1:** Orquestra a leitura de URLs, desduplicação e o processo de coleta paralela. |
+| **`src/Verificador.py`** | Lógica de **Download** de URL, tratamento de erros HTTP e salvamento do HTML. |
+| **`src/Indexador.py`** | **Etapa 2:** Processa os HTMLs, realiza limpeza (PLN), tokenização e constrói o **índice invertido** e o mapa de documentos. |
+| **`src/CalculaIDF.py`** | **Etapa 3:** Calcula o **IDF** para cada termo do vocabulário, usando os artefatos da Etapa 2. |
+| **`src/SearchEngine.py`**| **Etapa 4:** Provê a funcionalidade de busca TF-IDF, utilizando todos os artefatos gerados. |
 | **`src/Logging.py`** | Configuração do sistema de log (cria a pasta `logs/` e gera arquivos com *timestamp*). |
+| **`src/Relatorio.py`** | Gera relatórios CSV consolidados (sucesso/erro) após a coleta. |
+| **`src/Diagnostico.py`**| Ferramenta de "Health Check" que verifica a saúde e consistência de todos os artefatos gerados. |
 
 -----
 
@@ -135,7 +146,7 @@ DATASETS_DIR = r'E:\Documentos\RIWRS_2\RIWRS\TP-Coletor\datasets'
 # ... (restante dos arquivos em URL_FILES)
 ```
 
-### 4.2. Ajuste de Parâmetros de Desempenho
+### 4.2. Ajuste de Parâmetros de Desempenho (Processor.py)
 
 | Variável | Propósito | Dica de Ajuste |
 | :--- | :--- | :--- |
