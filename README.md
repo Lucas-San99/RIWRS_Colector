@@ -31,7 +31,7 @@ Este programa foi desenvolvido como parte das atividades práticas da disciplina
 
 | Sistema Operacional | Instruções |
 | :--- | :--- |
-| **Windows** | 1. Baixe o instalador em [python.org]. 2. **CRÍTICO:** Marque a caixa **"Add Python to PATH"**. |
+| **Windows** | 1. Baixe o instalador em [python.org](https://www.python.org/). 2. **CRÍTICO:** Marque a caixa **"Add Python to PATH"**. |
 | **macOS** | Use o Homebrew: `brew install python` |
 | **Linux** | Use o gerenciador de pacotes: `sudo apt update && sudo apt install python3 python3-pip` |
 
