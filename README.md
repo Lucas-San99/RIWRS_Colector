@@ -35,19 +35,26 @@ Este programa foi desenvolvido como parte das atividades práticas da disciplina
 | **macOS** | Use o Homebrew: `brew install python` |
 | **Linux** | Use o gerenciador de pacotes: `sudo apt update && sudo apt install python3 python3-pip` |
 
-### 2.2. Automação da Configuração (Windows)
+### 2.2. Automação da Configuração (Windows com `setup.bat`)
 
-No Windows, o arquivo `setup.bat` automatiza a criação do ambiente virtual e a instalação de todas as dependências necessárias, incluindo `pandas`, `requests`, `nltk` e `beautifulsoup4`.
+Para usuários de Windows, o projeto inclui um script `setup.bat` que automatiza todo o processo de configuração.
 
-**CRÍTICO:** Você deve executar o `setup.bat` na pasta raiz do projeto (`TP-Coletor/`).
+**O que o `setup.bat` faz?**
+1.  **Cria um Ambiente Virtual:** Isola as dependências do projeto em uma pasta `venv/`, evitando conflitos com outras instalações Python no seu sistema.
+2.  **Ativa o Ambiente:** Prepara o terminal para usar o Python e as bibliotecas contidas no `venv/`.
+3.  **Atualiza o `pip`:** Garante que o instalador de pacotes do Python esteja na sua versão mais recente.
+4.  **Instala e Atualiza as Dependências:** Instala todas as bibliotecas necessárias para o projeto (`pandas`, `requests`, `tqdm`, `beautifulsoup4`, `nltk`, `ijson`) e as atualiza para as versões mais recentes disponíveis. Isso garante que o projeto sempre rode com as últimas correções e funcionalidades das bibliotecas.
 
-```bash
-# 1. Execute o script de configuração
-.\setup.bat
-
-# 2. O script irá criar o venv e instalar as dependências.
-#    Após o setup, você precisará ATIVAR o ambiente para rodar o Coletor.py.
-```
+**Como usar:**
+1.  Abra um terminal (Prompt de Comando ou PowerShell) na pasta raiz do projeto.
+2.  Execute o script:
+    ```bash
+    .\setup.bat
+    ```
+3.  Após a execução, o ambiente estará pronto. Para começar a usar, ative o ambiente virtual no seu terminal com o comando:
+    ```bash
+    .\venv\Scripts\activate
+    ```
 
 ### 2.3. Criação e Ativação do Ambiente Virtual (Manual para Outros SOs / Pós-Setup)
 
@@ -63,72 +70,90 @@ python3 -m venv venv
 # source venv/bin/activate
 ```
 
-### 2.4. Instalação das Dependências
+### 2.4. Instalação Manual das Dependências (Linux/macOS ou Pós-Setup)
 
-*(Esta seção se torna redundante no Windows se o .bat for usado, mas é mantida para Linux/macOS ou se o usuário quiser verificar)*
+Se você não está no Windows ou prefere fazer a instalação manualmente, siga estes passos após criar e ativar o ambiente virtual:
 
-Com o ambiente ativado, instale as bibliotecas necessárias:
-
-```bash
-# Use este comando apenas se o setup.bat não foi executado ou falhou:
-pip install pandas requests tqdm nltk beautifulsoup4
-```
+1.  **Atualize o `pip`:**
+    ```bash
+    pip install --upgrade pip
+    ```
+2.  **Instale as bibliotecas:**
+    ```bash
+    pip install --upgrade pandas requests tqdm beautifulsoup4 nltk ijson
+    ```
+Este comando também pode ser usado para atualizar as dependências para suas versões mais recentes a qualquer momento.
 -----
 
-## 3\. Estrutura e Modularidade do Projeto
+## 3. Estrutura e Modularidade do Projeto
 
 O projeto adota uma estrutura profissional com o código-fonte principal isolado na pasta `src/`.
 
 ### 3.1. Estrutura de Diretórios
 
 ```
-TP-Coletor/
+RIWRS_2/
 ├── Coletor.py           <-- ARQUIVO DE EXECUÇÃO (Launcher)
+├── setup.bat            <-- Script de instalação para Windows
 ├── venv/                # Ignorado no .gitignore
 ├── datasets/            # Pasta OBRIGATÓRIA com os CSVs de origem
-├── logs/                # Pasta de saída para logs e relatórios CSV
+├── logs/                # Pasta de saída para logs e artefatos (índices, IDFs)
+├── html_pages_temp/     # Armazenamento temporário de HTMLs baixados
+├── coletas_compactadas/ # Arquivos .zip com as coletas finalizadas
 ├── src/                 # Diretório do código-fonte (pacote)
-│   ├── __init__.py
-│   ├── processador.py   <-- Lógica principal (orquestração)
-│   ├── Verificador.py   <-- Classe de Download
-│   ├── Relatorio.py     <-- Classe de Geração de Relatórios
-│   └── Logging.py       <-- Configuração do Logger
-|   |__ Indexador.py     <-- Indexação dos indices invertidos e representação dos dados
+│   ├── Config.py        <-- Configurações centralizadas (caminhos)
+│   ├── Logging.py       <-- Configuração do Logger
+│   ├── Verificador.py   <-- Lógica de Download de URL
+│   ├── Processor.py     <-- Orquestrador da Coleta (Etapa 1)
+│   ├── Indexador.py     <-- Representação e Indexação (Etapa 2)
+│   ├── CalculaIDF.py    <-- Cálculo de IDF (Etapa 3)
+│   ├── SearchEngine.py  <-- Motor de Busca (Etapa 3)
+│   ├── Diagnostico.py   <-- Scripts de verificação e contagem
+│   └── Relatorio.py     <-- Geração de relatórios de coleta
 └── README.md
-|__ .gitignore
 ```
 
 ### 3.2. Funções dos Módulos
 
 | Arquivo/Classe | Responsabilidade Principal |
 | :--- | :--- |
-| **`Coletor.py`** | Ponto de entrada (Launcher). Inicializa o ambiente e chama a lógica de `src/`. |
-| **`src/processador.py`** | Orquestração, leitura de dados, desduplicação e controle do ciclo de coleta. |
-| **`src/Verificador.py`** | Lógica de **Download** de URL e registro de erros de Status HTTP (4xx, 5xx) em tempo real. |
+| **`Coletor.py`** | Ponto de entrada (Launcher). Orquestra a execução das etapas (Coleta, Indexação, etc.). |
+| **`src/Config.py`** | Centraliza todos os caminhos de pastas (`logs`, `datasets`, etc.) para fácil manutenção. |
+| **`src/Processor.py`** | **Etapa 1:** Orquestra a leitura de URLs, desduplicação e o processo de coleta paralela. |
+| **`src/Verificador.py`** | Lógica de **Download** de URL, tratamento de erros HTTP e salvamento do HTML. |
+| **`src/Indexador.py`** | **Etapa 2:** Processa os HTMLs, realiza limpeza (PLN), tokenização e constrói o **índice invertido** e o mapa de documentos. |
+| **`src/CalculaIDF.py`** | **Etapa 3.1:** Calcula o **IDF** para cada termo do vocabulário, usando os artefatos da Etapa 2. |
+| **`src/SearchEngine.py`**| **Etapa 3.2:** Provê a funcionalidade de busca, incluindo o mapeamento de DocIDs para URLs. |
 | **`src/Logging.py`** | Configuração do sistema de log (cria a pasta `logs/` e gera arquivos com *timestamp*). |
+| **`src/Relatorio.py`** | Gera relatórios CSV consolidados (sucesso/erro) após a coleta. |
+| **`src/Diagnostico.py`**| Ferramenta auxiliar para contagem e verificação dos resultados da coleta. |
 
 -----
 
-## 4\. Configuração Necessária
+## 4. Configuração
 
-As configurações são definidas no arquivo **`src/processador.py`**.
+As configurações principais foram centralizadas para facilitar a manutenção.
 
-### 4.1. Ajuste de Caminhos (`DATASETS_DIR`)
+### 4.1. Caminhos de Pastas (`src/Config.py`)
 
-Você **DEVE** ajustar o caminho absoluto para sua pasta de dados:
+Todas as pastas importantes (logs, datasets, etc.) são definidas em `src/Config.py`. **Não é necessário alterar este arquivo** se você mantiver a estrutura de pastas padrão.
+
+### 4.2. Caminho dos Datasets (`src/Processor.py`)
+
+Você **DEVE** ajustar o caminho absoluto para a sua pasta de datasets no arquivo `src/Processor.py`:
 
 ```python
-# NO ARQUIVO: src/processador.py
+# NO ARQUIVO: src/Processor.py
 # ...
-# Configurando caminho para os datasets 
+# Configurando caminho para os datasets
 # >>> AJUSTE O CAMINHO ABSOLUTO AQUI <<<
-DATASETS_DIR = r'E:\Documentos\RIWRS_2\RIWRS\TP-Coletor\datasets' 
+DATASETS_DIR = r'E:\Documentos\RIWRS_2\datasets' 
 # Exemplo Linux: DATASETS_DIR = '/home/usuario/caminho/datasets'
-
-# ... (restante dos arquivos em URL_FILES)
 ```
 
-### 4.2. Ajuste de Parâmetros de Desempenho
+### 4.3. Parâmetros de Desempenho (`src/Processor.py`)
+
+Ajuste os parâmetros de desempenho da coleta no mesmo arquivo:
 
 | Variável | Propósito | Dica de Ajuste |
 | :--- | :--- | :--- |
@@ -137,28 +162,67 @@ DATASETS_DIR = r'E:\Documentos\RIWRS_2\RIWRS\TP-Coletor\datasets'
 
 -----
 
-## 5\. Execução e Acompanhamento de Logs
+## 5. Execução das Etapas
 
-### 5.1. Execução
+O `Coletor.py` agora orquestra a execução de todas as etapas do projeto.
 
-Rode o script principal a partir da **raiz** do projeto (`TP-Coletor/`):
+### 5.1. Etapa 1: Coleta
+
+Executa a coleta de páginas HTML.
 
 ```bash
-(venv) $ python Coletor.py
+(venv) $ python Coletor.py --etapa coleta
 ```
 
-### 5.2. Acompanhamento e Saídas
+### 5.2. Etapa 2: Indexação
 
-Todos os arquivos de saída (logs de execução e relatórios de resultados) são salvos na pasta **`logs/`**.
+Processa os HTMLs baixados, constrói e salva o índice invertido e o mapa de documentos.
+
+```bash
+(venv) $ python Coletor.py --etapa indexacao
+```
+
+### 5.3. Etapa 3: Cálculo de IDF
+
+Calcula o IDF para todos os termos do vocabulário.
+
+```bash
+(venv) $ python Coletor.py --etapa idf
+```
+
+### 5.4. Etapa 4: Diagnóstico (Opcional)
+
+Roda um script que conta o total de páginas coletadas com sucesso.
+
+```bash
+(venv) $ python Coletor.py --etapa diagnostico
+```
+
+### 5.5. Execução Completa (Todas as Etapas em Ordem)
+
+Para executar todas as etapas em sequência (coleta, indexação e cálculo de IDF):
+
+```bash
+(venv) $ python Coletor.py --etapa todas
+```
+
+-----
+
+## 6. Acompanhamento e Saídas
+
+Todos os arquivos de saída, incluindo logs e artefatos de indexação, são salvos na pasta **`logs/`**.
 
 | Arquivo/Localização | Conteúdo e Natureza | Propósito |
 | :--- | :--- | :--- |
-| **Console/Terminal** | Mensagens INFO (progresso), e **ERROR/CRITICAL** (falhas) em tempo real. | Monitoramento imediato. |
-| **`logs/coletor_run_*.log`** | **Log de Execução com Timestamp.** Contém a saída completa do console, incluindo o **Status Code** e a URL exata da falha. | Auditoria de execução e diagnóstico de erros de rede. |
-| **`logs/collection_log.csv`** | **Log Mestre de Resultados (Cumulativo).** Registro estruturado de todas as tentativas feitas até hoje. **Local de Armazenamento Final**. | Fonte de dados persistente. |
-| **`logs/relatorio_erros.csv`** | **Relatório Final Filtrado.** Contém apenas as URLs que resultaram em erro (`ERROR` ou `FATAL_ERROR`). | Análise estatística da taxa de falhas. |
-| **`logs/error_log.txt`** | **Lista de Erros da Sessão.** Simples lista de URLs que falharam na última execução. | Entrada para uma nova tentativa de coleta (retry). |
-| **`coletas_compactadas/*.zip`** | **Arquivos HTML Coletados.** | Artefato final da coleta bem-sucedida. |
+| **Console/Terminal** | Mensagens de progresso (INFO) e erros (ERROR/CRITICAL) em tempo real. | Monitoramento imediato da execução. |
+| **`logs/coletor_run_*.log`** | **Log de Execução:** Saída completa do console, com *timestamp*. | Auditoria detalhada e diagnóstico de falhas. |
+| **`logs/collection_log.csv`** | **Log Mestre de Coleta:** Registro cumulativo de todas as tentativas de download. | Fonte de dados persistente sobre a coleta. |
+| **`logs/relatorio_sucesso.csv`** | **Relatório de Sucesso:** CSV filtrado apenas com as URLs baixadas com sucesso. | Análise de resultados positivos. |
+| **`logs/relatorio_erros.csv`** | **Relatório de Erros:** CSV filtrado apenas com as URLs que falharam. | Análise da taxa e dos motivos de falha. |
+| **`logs/indice_invertido.json`**| **Índice Invertido:** Estrutura de dados principal para a busca. Mapeia termos para os documentos onde ocorrem. | **Artefato da Etapa 2.** Essencial para o motor de busca. |
+| **`logs/document_map.json`** | **Mapa de Documentos:** Dicionário que mapeia um `DocID` (int) para a `URL` original. | **Artefato da Etapa 2.** Usado para apresentar os resultados da busca. |
+| **`logs/idf.json`** | **Pesos IDF:** Dicionário que mapeia cada termo do vocabulário ao seu valor de IDF. | **Artefato da Etapa 3.** Usado para calcular o ranking de relevância (TF-IDF). |
+| **`coletas_compactadas/*.zip`** | **Arquivos HTML Coletados:** Backup compactado dos arquivos HTML baixados. | Arquivamento dos dados brutos. |
 
 -----
 
