@@ -5,13 +5,11 @@
 import os
 import json
 from logging import getLogger
+from Config import LOG_DIR_OUTPUT
 
 logger = getLogger('ColetorLogger')
 
-# Configuração do caminho para o arquivo document_map.json
-# Sobe dois níveis para sair de 'src/' e ir para a raiz do projeto (RIWRS_2/)
-BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
-LOG_DIR_OUTPUT = os.path.join(BASE_PATH, 'logs')
+# Caminho para o arquivo document_map.json (na pasta de logs da raiz do projeto)
 DOCUMENT_MAP_FILE = os.path.join(LOG_DIR_OUTPUT, 'document_map.json')
 
 class SearchEngine:
