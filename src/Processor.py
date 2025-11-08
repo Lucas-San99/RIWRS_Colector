@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from Verificador import Verificador
 from Relatorio import GeradorRelatorio
 from Logging import setup_logging
+from Config import BASE_PATH, LOG_DIR_OUTPUT, OUTPUT_DIR_TEMP, ZIP_OUTPUT_DIR
 
 # Configuracão do logger (Chamada modular, garantindo que seja o mesmo do launcher)
 logger = setup_logging()
@@ -22,14 +23,8 @@ logger = setup_logging()
 # 2. CONFIGURAÇÕES PRINCIPAIS
 # ==============================================================================
 
-# --- Caminhos e Arquivos ---
-BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
+# --- Caminhos e Arquivos (centralizados em src/config.py) ---
 URL_COLUMN_NAME = 'URL'
-
-LOG_DIR_OUTPUT = os.path.join(BASE_PATH, 'logs')
-
-OUTPUT_DIR_TEMP = os.path.join(BASE_PATH, 'html_pages_temp')
-ZIP_OUTPUT_DIR = os.path.join(BASE_PATH, 'coletas_compactadas')
 
 # --- LOG_FILE e ERROR_LOG_FILE apontam para logs/ ---
 LOG_FILE = os.path.join(LOG_DIR_OUTPUT, 'collection_log.csv')
@@ -65,7 +60,7 @@ def finalize_collection():
     logger.info("="*50)
 
     if not os.path.isdir(OUTPUT_DIR_TEMP) or not os.listdir(OUTPUT_DIR_TEMP):
-        warnings.warn("Nenhum arquivo novo foi baixado nesta sessão. Nenhum arquivo .zip será criado.", UserWarning)
+        logger.warning("Nenhum arquivo novo foi baixado nesta sessão. Nenhum arquivo .zip será criado.")
         return
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -99,10 +94,12 @@ def main():
     try:
         if os.path.exists(LOG_FILE):
             log_df = pd.read_csv(LOG_FILE, on_bad_lines='skip')
-            success_df = log_df[log_df['status'].str.startswith('SUCCESS', na=False)]
-            completed_urls = set(success_df['original_url'])
+            if not log_df.empty and 'status' in log_df.columns and 'original_url' in log_df.columns:
+                success_df = log_df[log_df['status'].str.startswith('SUCCESS', na=False)]
+                completed_urls = set(success_df['original_url'])
+                logger.info(f"Log de execuções anteriores encontrado. {len(completed_urls)} URLs já coletadas com sucesso.")
     except Exception as e:
-        warnings.warn(f"Falha ao ler o log de URLs concluídas: {e}. A coleta pode processar URLs duplicadas.", UserWarning)
+        logger.warning(f"Falha ao ler o log de URLs concluídas: {e}. A coleta pode reprocessar algumas URLs.")
 
     # --- Leitura e Concatenação dos Múltiplos Arquivos CSV ---
     all_dfs = []
@@ -140,9 +137,11 @@ def main():
         logger.info("Nenhuma URL nova para coletar. A tarefa já foi concluída!")
         return True, []
     
+    # --- CORREÇÃO: Garante que o log seja sempre cumulativo (append) ---
     needs_header = not os.path.exists(LOG_FILE)
     
-    with open(LOG_FILE, 'a', encoding='utf-8', newline='') as log_f:
+    # 'a' (append mode) garante que o arquivo nunca seja sobrescrito.
+    with open(LOG_FILE, 'a', encoding='utf-8', newline='') as log_f: 
         if needs_header:
             log_f.write("original_url,saved_filename,status\n")
 
