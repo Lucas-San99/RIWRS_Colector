@@ -1,47 +1,55 @@
 @echo off
-REM ==========================================================
-REM Script de Setup e Instalação de Dependências (Windows/CMD)
-REM Assume que você está na pasta raiz do projeto.
-REM ==========================================================
+REM =================================================================
+REM Script de Setup, Instalação e Atualização de Dependências (Windows)
+REM =================================================================
+REM Este script automatiza as seguintes tarefas:
+REM 1. Cria um ambiente virtual chamado 'venv' (se não existir).
+REM 2. Ativa o ambiente virtual.
+REM 3. Atualiza o 'pip' para a versão mais recente.
+REM 4. Instala ou atualiza todas as bibliotecas Python necessárias.
+REM =================================================================
 
-echo [1/3] Criando Ambiente Virtual (venv)...
-python -m venv venv
-
-if exist venv\Scripts\activate.bat (
-    echo Ambiente virtual criado com sucesso.
+echo [1/4] Criando Ambiente Virtual (venv)...
+if not exist venv\ (
+    python -m venv venv
+    if exist venv\Scripts\activate.bat (
+        echo Ambiente virtual 'venv' criado com sucesso.
+    ) else (
+        echo ERRO: Falha ao criar o ambiente virtual. Verifique se o Python esta no PATH.
+        pause
+        exit /b 1
+    )
 ) else (
-    echo ERRO: Falha ao criar o ambiente virtual ou o Python nao esta no PATH.
-    pause
-    exit /b 1
+    echo Ambiente virtual 'venv' ja existe. Pulando criacao.
 )
 
 echo.
 
-echo [2/3] Ativando e Instalando dependencias (pandas, requests, nltk, ijson)...
-REM Tenta ativar o ambiente virtual para que o PIP instale os pacotes nele (Falhou no meu teste)
+echo [2/4] Ativando ambiente virtual...
 call .\venv\Scripts\activate
 
-REM Instala as dependencias essenciais do coletor (Funciona)
-pip install pandas requests tqdm
-pip install nltk beautifulsoup4
+echo.
 
-REM Instala o ijson para parsing incremental de JSONs grandes (usado no cálculo de IDF)
-pip install ijson
+echo [3/4] Atualizando PIP para a versao mais recente...
+python.exe -m pip install --upgrade pip
 
 echo.
-echo [3/3] Instalacao concluida!
+
+echo [4/4] Instalando e/ou atualizando dependencias do projeto...
+REM Instala todas as dependencias de uma vez e força a atualização (--upgrade)
+pip install --upgrade pandas requests tqdm beautifulsoup4 nltk ijson
+
+echo.
 echo ==========================================================
-echo O ambiente virtual (venv) foi configurado e as bibliotecas foram instaladas.
-echo O ambiente VENV esta ATIVO (deve aparecer (venv) no prompt).
+echo INSTALACAO CONCLUIDA!
+echo ==========================================================
+echo O ambiente virtual 'venv' foi configurado e as bibliotecas foram atualizadas.
+echo.
+echo PARA USAR O AMBIENTE, execute o seguinte comando no seu terminal:
+echo   .\venv\Scripts\activate
+echo.
+echo Depois, voce pode rodar o programa principal:
+echo   python Coletor.py
 echo.
 
-REM Depois que finalizar o setup
-echo Agora inicie o ambiente venv com o comando abaixo:
-echo .\venv\Scripts\activate
-echo Depois execute:
-echo python Coletor.py
-echo.
-
-REM Pressione ENTER para fechar a janela, mas o comando 'call' acima
-REM deve manter o ambiente ativo na sessao atual do PowerShell/CMD se usado com 'call'
 pause
