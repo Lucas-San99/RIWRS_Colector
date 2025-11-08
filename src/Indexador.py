@@ -94,7 +94,20 @@ class Indexador:
         document_map = {} # {doc_id: original_url}
         
         try:
-            log_df = pd.read_csv(log_file_path, on_bad_lines='skip', low_memory=False)
+            # --- Leitura  do CSV ---
+            # Especifica o motor 'python' e o 'quotechar' para lidar corretamente
+            # com mensagens de erro que contêm caracteres especiais dentro das colunas.
+            log_df = pd.read_csv(
+                log_file_path, on_bad_lines='skip', low_memory=False, engine='python', quotechar='"'
+            )
+            
+            # --- VERIFICAÇÃO: Executada ANTES de acessar as colunas ---
+            colunas_necessarias = {'status', 'saved_filename', 'original_url'}
+            if log_df.empty or not colunas_necessarias.issubset(log_df.columns):
+                msg_erro = ("O arquivo de log ('collection_log.csv') está vazio ou malformado. "
+                            "Execute a Etapa 1 (Coleta) primeiro para gerar um log válido.")
+                logger.error(msg_erro)
+                return None, None, msg_erro
             sucesso_df = log_df[log_df['status'].str.startswith('SUCCESS')]
             
             # --- 1. OTIMIZAÇÃO CRÍTICA: Filtra apenas arquivos disponíveis em disco ---
@@ -111,8 +124,9 @@ class Indexador:
             logger.warning(f"Total de documentos FALTANTES (deletados/limpos): {total_docs_faltando}")
             
             if total_docs_indexar == 0:
-                logger.error("Nenhum arquivo HTML disponível para indexação. Abortando.")
-                return None, None
+                msg_erro = "Nenhum arquivo HTML para indexar foi encontrado na pasta temporária. Execute a Etapa 1 (Coleta)."
+                logger.error(msg_erro)
+                return None, None, msg_erro
                 
             # Itera apenas sobre os documentos que realmente existem
             for doc_id, row in enumerate(df_indexar.itertuples()):
@@ -146,12 +160,13 @@ class Indexador:
                     indice_invertido[termo]['postings'][doc_id] = tf 
             
             logger.info(f"Índice construído. Total de termos únicos: {len(indice_invertido)}")
-            return indice_invertido, document_map
+            return indice_invertido, document_map, None # Retorna None para o erro em caso de sucesso
         
         except Exception as e:
             # Captura falhas na leitura do CSV ou erros de DataFrame
-            logger.critical(f"Falha CRÍTICA na construção do índice. Erro: {e}")
-            return None, None
+            msg_erro = f"Falha CRÍTICA na construção do índice. Erro: {e}"
+            logger.critical(msg_erro)
+            return None, None, msg_erro
             
     @staticmethod
     def salvar_indice(indice, doc_map, output_dir):
