@@ -16,13 +16,17 @@ if exist venv\Scripts\activate.bat (
 )
 
 echo.
-echo [2/3] Ativando e Instalando dependencias (pandas, requests, nltk)...
+
+echo [2/3] Ativando e Instalando dependencias (pandas, requests, nltk, ijson)...
 REM Tenta ativar o ambiente virtual para que o PIP instale os pacotes nele (Falhou no meu teste)
 call .\venv\Scripts\activate
 
 REM Instala as dependencias essenciais do coletor (Funciona)
 pip install pandas requests tqdm
 pip install nltk beautifulsoup4
+
+REM Instala o ijson para parsing incremental de JSONs grandes (usado no cálculo de IDF)
+pip install ijson
 
 echo.
 echo [3/3] Instalacao concluida!
