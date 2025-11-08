@@ -1,4 +1,4 @@
-# ==============================================================================
+# ============================================================================== 
 # Coletor.py (NOVO - Launcher Interativo e Modular - CORRIGIDO)
 # ==============================================================================
 import sys
@@ -21,6 +21,7 @@ try:
     from Indexador import Indexador  
     from Diagnostico import contar_paginas_coletadas
     from Relatorio import GeradorRelatorio
+    from CalculaIDF import calcula_idf
     
     # Importa constantes de caminho do processor para uso interno
     from Processor import BASE_PATH, LOG_FILE, OUTPUT_DIR_TEMP, LOG_DIR_OUTPUT
@@ -110,6 +111,19 @@ def rodar_indexacao_manual():
     else:
         logger.error("INDEXAÇÃO MANUAL FALHOU. Verifique os logs de erro.")
 
+# Função para cálculo do IDF
+def rodar_calculo_idf():
+    """Executa o cálculo do IDF chamando src/CalculaIDF.py"""
+    print("Opção selecionada: CALCULAR IDF (Inverse Document Frequency).")
+    script_path = os.path.join(SRC_DIR, 'CalculaIDF.py')
+    try:
+        exit_code = os.system(f'python "{script_path}"')
+        if exit_code == 0:
+            print("Cálculo de IDF concluído com sucesso.")
+        else:
+            print(f"Houve um erro ao calcular o IDF. Código de saída: {exit_code}. Veja as mensagens acima para detalhes.")
+    except Exception as e:
+        print(f"Erro ao tentar rodar o cálculo de IDF: {e.__class__.__name__}: {e}")
 
 def exibir_menu():
     """Exibe o menu interativo no console."""
@@ -119,7 +133,8 @@ def exibir_menu():
         '3': ("Rodar Pós-Processamento (Simulado/Teste)", rodar_pos_processamento_simulado),
         '4': ("Gerar Relatórios de Sucesso/Erro (Manual)", gerar_relatorios_manualmente), 
         '5': ("Rodar Indexação e Representação (Entrega 2)", rodar_indexacao_manual), 
-        '6': ("Sair", sys.exit)
+        '6': ("Calcular IDF (Inverse Document Frequency)", rodar_calculo_idf),
+        '7': ("Sair", sys.exit),
     }
 
     while True:
@@ -130,7 +145,7 @@ def exibir_menu():
             print(f"[{chave}] {descricao}")
         print("-" * 50)
         
-        escolha = input("Selecione uma opção (1-6): ")
+        escolha = input("Selecione uma opção (1-7): ")
         
         if escolha in menu_opcoes:
             descricao, funcao = menu_opcoes[escolha]

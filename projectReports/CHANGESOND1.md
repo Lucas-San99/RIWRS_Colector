@@ -1,76 +1,48 @@
+# Mudanças e Explicação da Funcionalidade de Cálculo de IDF
+
+## Introdução
+
+Foi implementada uma nova funcionalidade no projeto para calcular o IDF (Inverse Document Frequency) de todos os termos presentes no índice invertido. O cálculo de IDF é fundamental em sistemas de recuperação da informação, pois permite medir a importância de cada termo em relação ao conjunto de documentos.
+
+## Mudanças Realizadas
+
+- Criação do arquivo `src/CalculaIDF.py` responsável por calcular o IDF de todos os termos do índice invertido.
+- O script lê o índice invertido (`logs/indice_invertido.json`) e o mapa de documentos (`logs/document_map.json`).
+- O resultado do cálculo é salvo em `logs/idf.json`, contendo o IDF de cada termo.
+- Implementação de fallback para processar índices muito grandes usando o pacote `ijson` (parser incremental).
+- Mensagens de log e tratamento de erros aprimorados para facilitar o diagnóstico.
+
+## Funcionamento do `CalculaIDF.py`
+
+O script executa os seguintes passos:
+
+1. **Carrega o mapa de documentos** para obter o número total de documentos (N).
+2. **Tenta carregar o índice invertido inteiro em memória**. Caso não seja possível (por exemplo, se o arquivo for muito grande), utiliza o parser incremental `ijson`.
+3. **Para cada termo no índice invertido**, obtém o número de documentos em que o termo aparece (df) e calcula o IDF usando a fórmula:
+   
+   $$
+   	ext{IDF}(t) = \log\left(\frac{N}{df_t}\right)
+   $$
+
+4. **Salva o resultado** em `logs/idf.json`, no formato `{ "termo": idf, ... }`.
+
+## Como Interpretar o Resultado (`idf.json`)
+
+O arquivo `idf.json` contém um dicionário onde:
+- **Chave**: termo do índice invertido.
+- **Valor**: IDF calculado para o termo.
+
+### Interpretação dos valores de IDF
+- **IDF alto**: O termo aparece em poucos documentos, sendo mais relevante para diferenciar documentos.
+- **IDF baixo**: O termo aparece em muitos documentos, sendo menos útil para diferenciação (ex: palavras muito comuns).
+- **IDF = 0**: O termo aparece em todos os documentos, não ajudando a distinguir nenhum documento.
+
+### Exemplo de uso
+Se o termo "inteligência" tem IDF alto, ele é raro e pode ser um bom discriminador de documentos. Se o termo "de" tem IDF próximo de zero, ele é comum e pouco informativo.
+
+---
+
+**Autor:**
+Osvaldo Neto @osvaldoferreiraf
+Data da atualização: 08/11/2025
 # Documento Técnico e Análise de Complexidade do Coletor Web Não Modular --> Modular
-
-## 1\. Justificativa da Arquitetura e Decisão do Ambiente
-
-O projeto Coletor Web foi desenvolvido como um trabalho prático para a disciplina de Recuperação de Informação na Web e Redes Sociais para aplicar conhecimentos teóricos adquiridos em sala de aula. A mudança do ambiente Google Colab para uma solução local e modularizada é justificada pela necessidade de estabilidade, rastreabilidade e escalabilidade.
-
-### 1.1. Justificativa para Migração do Google Colab
-
-| Problema Encontrado no Colab/Drive | Impacto no Projeto |
-| :--- | :--- |
-| **Erros de Timeout na Conexão do Drive (I/O)** | Ao tentar salvar logs (`.csv`) ou arquivos HTML grandes no Google Drive, a latência da API do Drive frequentemente causava **erros de I/O e *timeouts*** dentro das *threads*. Isso corrompia o processo de coleta e levava à perda de dados. |
-| **Limitações do Processo de Coleta** | O Colab tem limites de tempo de execução e memória que são restritivos para coletas em larga escala. A máquina virtual do Colab é volátil; encerrada a sessão, o *state* se perde. |
-| **Latência Inesperada** | A velocidade de rede do Colab é compartilhada. Flutuações na latência de rede introduziram *timeouts* aleatórios nas requisições, tornando os logs de erro inconsistentes. |
-
-**Vantagem da Solução Local (VM/VS Code):** O ambiente local é um pouco mais estável e permite controle total sobre o I/O do disco, eliminando *timeouts* induzidos pela API de nuvem e garantindo a persistência imediata de logs e dados.
-
-### 1.2. Benefícios da Modularização e Arquitetura `src/`
-
-A adoção da arquitetura modular (`src/`) e de classes distintas é uma aplicação direta do **Princípio da Responsabilidade Única (SRP)**.
-
-| Benefício | Módulos Envolvidos | Justificativa Técnica |
-| :--- | :--- | :--- |
-| **Organização Profissional** | Todos | Separa o código-fonte (`src/`) dos artefatos de saída (`logs/`, `datasets/`), seguindo a convenção moderna de Python. |
-| **Testabilidade** | `Verificador.py` | A lógica de download pode ser testada isoladamente (Testes Unitários) sem a necessidade de inicializar o *executor* de *threads* principal. |
-| **Manutenibilidade** | `Verificador.py`, `Logging.py` | Alterar o tratamento de erros HTTP (no `Verificador.py`) ou o formato do log (no `Logging.py`) não exige modificações no orquestrador principal (`Processor.py`). |
-| **Clareza (SRP)** | `Processor.py` | Este arquivo agora foca apenas na lógica de negócio (desduplicação, orquestração de *threads* e geração de logs) e não no *como* fazer o download ou o log. |
-
-## 2\. Análise Detalhada dos Componentes e Imports
-
-| Módulo/Biblioteca | Importação | Função no Código |
-| :--- | :--- | :--- |
-| **`pandas`** | `import pandas as pd` | Gerenciamento de dados estruturados (CSV). Usado para concatenar as múltiplas listas de URLs, desduplicar e ler/gerar relatórios de logs. |
-| **`requests`** | `import requests` (usado em `Verificador.py`) | Realiza todas as requisições HTTP (`GET`). É a biblioteca central para a coleta de dados de rede. |
-| **`concurrent.futures`** | `from concurrent.futures import ThreadPoolExecutor, as_completed` | Gerencia o *pool* de *threads* para paralelismo. Essencial para sobrepor o tempo de espera da rede. |
-| **`tqdm`** | `from tqdm import tqdm` | Fornece barras de progresso elegantes e informativas no console, acompanhando o trabalho das *threads*. |
-| **`logging`** | `import logging` (em `Logging.py` e `Verificador.py`) | Sistema modular de rastreamento de eventos. Permite registrar o sucesso (`INFO`) e a falha (`ERROR`, `CRITICAL`) em tempo real no console e em arquivos persistentes. |
-| **`shutil`, `os`** | `import shutil, import os` | Funções do sistema operacional: criação de pastas, manipulação de caminhos, e compactação de arquivos (`shutil.make_archive`). |
-
-## 3\. Estrutura do Programa e Fluxo de Execução
-
-O fluxo do programa é rigidamente controlado pela hierarquia de arquivos e pela separação de tarefas:
-
-  * **`Coletor.py` (Launcher/Ponto de Entrada):** Configura o `sys.path`, inicializa o *logger* e chama `main()` e `run_post_processing()` do `src/processador.py`.
-  * **`src/processador.py` (`main()`):** Responsável por concatenar os DataFrames, aplicar `df.drop_duplicates()` para eliminação de redundâncias, filtrar URLs já coletadas e iniciar o `ThreadPoolExecutor` para o trabalho de coleta.
-  * **`src/Verificador.py` (`download_url`):** Executa o `requests.get()`. Registra o *status* detalhado (código HTTP) em tempo real no `coletor_run_*.log` e retorna o resultado para registro no `collection_log.csv`.
-  * **`src/Processor.py` (`run_post_processing`):** Executa a fase de geração de relatórios, compactação e limpeza, garantindo que todas as tarefas finais sejam completadas.
-
-## 4\. Análise de Paralelismo (Threads) e Complexidade
-
-### 4.1. Processo de Paralelismo: Threads (I/O Bound)
-
-  * **Ferramenta:** `concurrent.futures.ThreadPoolExecutor`.
-  * **Decisão:** Escolhemos *threads* em vez de *multiprocessamento* porque a tarefa é **I/O Bound** (limitada por I/O, ou seja, tempo de espera pela rede). O **Efeito do GIL** é neutralizado, pois a *thread* libera o GIL enquanto espera a resposta do servidor, permitindo que outra *thread* trabalhe. Isso maximiza o uso da largura de banda.
-
-### 4.2. Complexidade Assintótica do Código
-
-A complexidade é dominada pelas operações de I/O e de DataFrame.
-
-| Operação | Complexidade (O) | Observação |
-| :--- | :--- | :--- |
-| **Coleta de URLs (Tempo Total)** | $O(N \cdot T_{avg})$ | $N$ é o número de URLs. $T_{avg}$ é o tempo médio de uma requisição. |
-| **Coleta Paralela** | $O((N/W) \cdot T_{avg} + T_{wait})$ | $W$ é `MAX_WORKERS`. O tempo total é drasticamente reduzido, sendo limitado pelo *overhead* e pela requisição mais lenta ($T_{wait}$). |
-| **Desduplicação (Pandas)** | $O(N \cdot log(N))$ | Onde $N$ é o número total de URLs nas fontes. A desduplicação é eficiente devido às otimizações do Pandas. |
-
-### 4.3. Impacto de Aumentar MAX\_WORKERS (Ex: 30)
-
-  * **Vantagem:** Reduz o tempo de execução.
-  * **Perigo:** Aumentar demais resulta em *overhead* de gerenciamento de *threads* e pode causar bloqueios por parte dos servidores alvo, levando a erros **429 (Too Many Requests)**.
-
-## 5\. Funcionamento Macro do Sistema (Excluindo Entrega 2)
-
-O diagrama de fluxo de trabalho mostra o caminho dos dados, desde a entrada em CSV até a persistência do *log* e a compactação final dos HTMLs.
-
-### 5.1. Desenho do Fluxo
-
-![Fluxograma técnico detalhando o processo do Coletor Web Modular, apresentando quatro fases distintas: inicialização do sistema, preparação dos dados, coleta paralela com threads, e pós-processamento. O diagrama usa conectores e caixas em tons neutros para mostrar a sequência lógica das operações, desde a entrada dos dados até a compactação final dos arquivos HTML coletados](./images/fluxo_previsto.png)
