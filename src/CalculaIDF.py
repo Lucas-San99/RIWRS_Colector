@@ -2,12 +2,12 @@ import json
 import math
 import os
 from tqdm import tqdm
+from Config import LOG_DIR
 
-# Caminhos dos arquivos dentro da pasta `logs`
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-INDICE_PATH = os.path.join(BASE_DIR, 'logs', 'indice_invertido.json')
-DOC_MAP_PATH = os.path.join(BASE_DIR, 'logs', 'document_map.json')
-IDF_OUTPUT_PATH = os.path.join(BASE_DIR, 'logs', 'idf.json')
+# Caminhos dos arquivos dentro da pasta `logs` (definida em src/config.py)
+INDICE_PATH = os.path.join(LOG_DIR, 'indice_invertido.json')
+DOC_MAP_PATH = os.path.join(LOG_DIR, 'document_map.json')
+IDF_OUTPUT_PATH = os.path.join(LOG_DIR, 'idf.json')
 
 def calcula_idf():
     # Carrega o mapa de documentos para obter N
