@@ -3,6 +3,7 @@
 # ==============================================================================
 import sys
 import os
+import argparse
 
 # --- 1. CONFIGURAÇÃO DE PATH ---
 # Adiciona o diretório 'src' ao Python Path para encontrar os módulos
@@ -12,23 +13,17 @@ sys.path.append(SRC_DIR)
 
 # --- 2. CONFIGURAÇÃO DE LOGGING E MÓDULOS ---
 try:
-    from Logging import setup_logging
-    # Renomeando de 'Processor' para 'processor' (boa prática)
-    from Processor import main as processor_main 
-    from Processor import run_post_processing
-    
-    # Importação da classe Indexador, Diagnostico e Relatorio
-    from Indexador import Indexador  
-    from Diagnostico import contar_paginas_coletadas
+    from Logging import setup_logging, get_log_file
+    logger = setup_logging()
+
+    from Processor import main as processor_main, run_post_processing
+    from Indexador import Indexador
+    from Diagnostico import health_check_sistema
     from Relatorio import GeradorRelatorio
     from CalculaIDF import calcula_idf
-    
-    # Importa constantes de caminho do processor para uso interno
-    from Processor import BASE_PATH, LOG_FILE, OUTPUT_DIR_TEMP, LOG_DIR_OUTPUT
+    from Config import OUTPUT_DIR_TEMP, LOG_DIR_OUTPUT
 
 except ImportError as e:
-    # Este bloco pega erros de módulo (como 'No module named Indexador' ou
-    # erros de dependência como 'No module named nltk' que estouram no Indexador)
     print("-" * 50)
     print("ERRO CRÍTICO DE IMPORTAÇÃO!")
     print("Detalhe do Erro: Este erro geralmente indica uma biblioteca faltando.")
@@ -36,132 +31,109 @@ except ImportError as e:
     print(f"Erro original: {e}")
     sys.exit(1)
 
-# Inicializa o logger
-logger = setup_logging()
-
 # ==============================================================================
-# FUNÇÕES DE EXECUÇÃO
+# FUNÇÕES DE EXECUÇÃO DAS ETAPAS
 # ==============================================================================
 
-def rodar_coletor_principal():
-    """Executa a coleta e o pós-processamento completo (Fases 1, 2 e 3)."""
-    print("Opção selecionada: INICIAR COLETA E PÓS-PROCESSAMENTO COMPLETO.")
-    
+def rodar_coleta():
+    """Executa a Etapa 1: Coleta e pós-processamento."""
+    logger.info("ETAPA 1: Iniciando Coleta e Pós-processamento.")
     collection_successful, attempted_urls = processor_main()
     run_post_processing(collection_successful, attempted_urls)
-    print("COLETA COMPLETA E PÓS-PROCESSAMENTO FINALIZADOS.")
+    logger.info("ETAPA 1: Finalizada.")
 
-def rodar_diagnostico_contagem():
-    """Executa apenas a contagem e diagnóstico do log."""
-    print("Opção selecionada: RODAR DIAGNÓSTICO E CONTAGEM DE LOGS.")
-    contar_paginas_coletadas()
-    print("DIAGNÓSTICO CONCLUÍDO.")
-
-def rodar_pos_processamento_simulado():
-    """Roda relatórios e compactação simulando o fim de uma coleta."""
-    logger.warning("-" * 50)
-    logger.warning("MODO SIMULADO: Pulando a coleta. Executando apenas Pós-Processamento.")
-    logger.warning("Este modo requer que o collection_log.csv e arquivos HTML já existam.")
-    logger.warning("-" * 50)
-    
-    collection_successful_mock = True
-    attempted_urls_mock = [] 
-    
-    run_post_processing(collection_successful_mock, attempted_urls_mock)
-    print("PÓS-PROCESSAMENTO SIMULADO FINALIZADO.")
-
-def gerar_relatorios_manualmente():
-    """Chama a lógica de GeradorRelatorio para criar os CSVs de Sucesso e Erro."""
-    print("Opção selecionada: GERAR RELATÓRIOS CONSOLIDADOS.")
-    
-    # Obter caminhos de entrada e saída (já definidos no processor)
-    LOG_DIR_OUTPUT_CALC = os.path.join(PROJECT_ROOT, 'logs')
-    LOG_FILE_CALC = os.path.join(LOG_DIR_OUTPUT_CALC, 'collection_log.csv')
-    
-    print(f"Analisando log mestre em: {LOG_FILE_CALC}")
-    
-    # Chama o método estático da classe GeradorRelatorio
-    relatorio_status = GeradorRelatorio.gerar_relatorios_consolidados(LOG_FILE_CALC, LOG_DIR_OUTPUT_CALC)
-    
-    if relatorio_status["success_path"]:
-        print(f"Relatório de Sucesso (Total: {relatorio_status['success_count']}) salvo em: {relatorio_status['success_path']}")
-    if relatorio_status["error_path"]:
-        print(f"Relatório de Erros (Total: {relatorio_status['error_count']}) salvo em: {relatorio_status['error_path']}")
-    
-    if relatorio_status["total"] == 0:
-        logger.warning("Nenhuma entrada processada. Verifique se o collection_log.csv existe e contém dados.")
-
-def rodar_indexacao_manual():
-    """Executa a indexação (Entrega 2) a partir dos arquivos HTML existentes."""
-    print("Opção selecionada: INICIAR INDEXAÇÃO MANUAL (ENTREGA 2).")
-    logger.warning("-" * 50)
-    logger.warning("NOTA: Esta operação utiliza arquivos da pasta temporária e o log mestre.")
-    logger.warning("Verifique se a coleta já foi executada.")
-    logger.warning("-" * 50)
-    
-    # A indexação deve salvar os índices (JSON) na pasta LOG_DIR_OUTPUT (logs/)
-    indice_invertido, document_map = Indexador.construir_indice_invertido(
-        LOG_FILE, 
-        OUTPUT_DIR_TEMP
-    )
-    
-    if indice_invertido:
+def rodar_indexacao():
+    """Executa a Etapa 2: Indexação dos documentos coletados."""
+    logger.info("ETAPA 2: Iniciando Indexação.")
+    log_file_path = get_log_file()  # Obter o path do log dinamicamente
+    # A função agora retorna uma tupla de 3 elementos (indice, mapa, erro)
+    indice_invertido, document_map, msg_erro = Indexador.construir_indice_invertido(log_file_path, OUTPUT_DIR_TEMP)
+    if indice_invertido and document_map:
         Indexador.salvar_indice(indice_invertido, document_map, LOG_DIR_OUTPUT)
-        print("INDEXAÇÃO MANUAL CONCLUÍDA COM SUCESSO.")
+        logger.info("ETAPA 2: Indexação concluída com sucesso.")
     else:
-        logger.error("INDEXAÇÃO MANUAL FALHOU. Verifique os logs de erro.")
+        logger.error(f"ETAPA 2: Falha na indexação. Motivo: {msg_erro}")
 
-# Função para cálculo do IDF
 def rodar_calculo_idf():
-    """Executa o cálculo do IDF chamando src/CalculaIDF.py"""
-    print("Opção selecionada: CALCULAR IDF (Inverse Document Frequency).")
-    script_path = os.path.join(SRC_DIR, 'CalculaIDF.py')
-    try:
-        exit_code = os.system(f'python "{script_path}"')
-        if exit_code == 0:
-            print("Cálculo de IDF concluído com sucesso.")
-        else:
-            print(f"Houve um erro ao calcular o IDF. Código de saída: {exit_code}. Veja as mensagens acima para detalhes.")
-    except Exception as e:
-        print(f"Erro ao tentar rodar o cálculo de IDF: {e.__class__.__name__}: {e}")
+    """Executa a Etapa 3: Cálculo do IDF."""
+    logger.info("ETAPA 3: Iniciando cálculo de IDF.")
+    calcula_idf()
+    logger.info("ETAPA 3: Cálculo de IDF finalizado.")
 
-def exibir_menu():
-    """Exibe o menu interativo no console."""
+def rodar_diagnostico():
+    """Executa um diagnóstico completo (Health Check) do sistema de RI."""
+    logger.info("DIAGNÓSTICO: Iniciando verificação de saúde do sistema.")
+    health_check_sistema()
+    logger.info("DIAGNÓSTICO: Verificação finalizada.")
+
+# ==============================================================================
+# CONTROLE DE EXECUÇÃO (ARGPARSE E MENU)
+# ==============================================================================
+
+def main():
+    """Ponto de entrada principal que processa argumentos de linha de comando."""
+    parser = argparse.ArgumentParser(description="Coletor e Processador de Páginas Web para RIWRS.")
+    parser.add_argument(
+        '--etapa',
+        type=str,
+        choices=['coleta', 'indexacao', 'idf', 'diagnostico', 'todas'],
+        help="Especifica a etapa a ser executada: 'coleta', 'indexacao', 'idf', 'diagnostico' ou 'todas'."
+    )
+
+    args = parser.parse_args()
+
+    if args.etapa:
+        if args.etapa == 'coleta':
+            rodar_coleta()
+        elif args.etapa == 'indexacao':
+            rodar_indexacao()
+        elif args.etapa == 'idf':
+            rodar_calculo_idf()
+        elif args.etapa == 'diagnostico':
+            rodar_diagnostico()
+        elif args.etapa == 'todas':
+            logger.info("Executando todas as etapas em sequência...")
+            rodar_coleta()
+            rodar_indexacao()
+            rodar_calculo_idf()
+            logger.info("Todas as etapas foram concluídas.")
+    else:
+        # Se nenhum argumento for fornecido, exibe o menu interativo
+        exibir_menu_interativo()
+
+def exibir_menu_interativo():
+    """Exibe um menu interativo para o usuário escolher a ação."""
     menu_opcoes = {
-        '1': ("Iniciar Coleta Principal", rodar_coletor_principal),
-        '2': ("Rodar Diagnóstico e Contagem de Logs", rodar_diagnostico_contagem),
-        '3': ("Rodar Pós-Processamento (Simulado/Teste)", rodar_pos_processamento_simulado),
-        '4': ("Gerar Relatórios de Sucesso/Erro (Manual)", gerar_relatorios_manualmente), 
-        '5': ("Rodar Indexação e Representação (Entrega 2)", rodar_indexacao_manual), 
-        '6': ("Calcular IDF (Inverse Document Frequency)", rodar_calculo_idf),
-        '7': ("Sair", sys.exit),
+        '1': ("Executar Todas as Etapas (Coleta -> Indexação -> IDF)", lambda: (rodar_coleta(), rodar_indexacao(), rodar_calculo_idf())),
+        '2': ("Etapa 1: Apenas Coleta e Pós-processamento", rodar_coleta),
+        '3': ("Etapa 2: Apenas Indexação", rodar_indexacao),
+        '4': ("Etapa 3: Apenas Cálculo de IDF", rodar_calculo_idf), # TODO: Adicionar busca
+        '5': ("Verificar Saúde do Sistema (Diagnóstico)", rodar_diagnostico),
+        '6': ("Sair", sys.exit)
     }
 
     while True:
         print("\n" + "="*50)
-        print("MENU DE EXECUÇÃO DO COLETOR WEB RIWRS")
+        print("MENU DE EXECUÇÃO INTERATIVO")
         print("="*50)
         for chave, (descricao, _) in menu_opcoes.items():
             print(f"[{chave}] {descricao}")
         print("-" * 50)
         
-        escolha = input("Selecione uma opção (1-7): ")
+        escolha = input(f"Selecione uma opção (1-{len(menu_opcoes)}): ")
         
         if escolha in menu_opcoes:
-            descricao, funcao = menu_opcoes[escolha]
-            if escolha == '6': 
-                print("Saindo do programa.")
-                funcao() 
-            else:
-                funcao()
+            _, funcao = menu_opcoes[escolha]
+            logger.info(f"Opção de menu selecionada: [{escolha}] {menu_opcoes[escolha][0]}")
+            funcao()
+            if escolha != '6':
                 print("\nProcesso concluído. Voltando ao menu principal...")
         else:
             logger.warning("Opção inválida. Por favor, tente novamente.")
 
-
 # ==============================================================================
-# 4. PONTO DE ENTRADA
+# PONTO DE ENTRADA PRINCIPAL
 # ==============================================================================
 if __name__ == '__main__':
-    print("Ambiente configurado com sucesso.")
-    exibir_menu()
+    logger.info("Ambiente configurado. Iniciando o launcher.")
+    main()
