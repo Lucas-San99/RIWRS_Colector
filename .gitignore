@@ -11,18 +11,18 @@ env/
 # Ignora todos os arquivos e pastas que são gerados pelo script.
 
 # Pasta de logs de execução e logs de resultados (collection_log.csv, error_log.txt)
-logs/
 logs/collection_log.csv
+logs/execution_log
+logs/indice_invertido.json
+logs/idf.json
 !logs/relatorio_erros.csv
 !logs/relatorio_sucessos.csv
-
 
 # Pasta de arquivos HTML temporários
 html_pages_temp/
 
 # Pasta de arquivos .zip finalizados
 coletas_compactadas/
-
 
 # 3. ARQUIVOS DE CACHE E BUILD DO PYTHON
 __pycache__/
@@ -34,7 +34,6 @@ __pycache__/
 dist/
 build/
 *.egg-info/
-
 
 # 4. ARQUIVOS DA IDE (VS CODE)
 # Arquivos de configuração do VS Code que são específicos do usuário.
@@ -53,4 +52,3 @@ $RECYCLE.BIN/
 
 # macOS (Se você mover o projeto para Mac)
 .DS_Store
-
