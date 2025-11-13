@@ -52,20 +52,28 @@ Data da atualização: 08/11/2025
 
 Esta tarefa adiciona o módulo de recuperação (Etapa 3) responsável por mapear resultados de DocIDs gerados pelo ranking para as URLs originais dos documentos, além de preparar a base para cálculos de ranking e uso do índice invertido.
 
+
 ### O que foi implementado
 
 - Criação da classe `SearchEngine` em `src/SearchEngine.py`.
 - Função de carregamento do mapa de documentos (`document_map.json`) para memória, com conversão das chaves para inteiros.
 - Cache interno (`_document_map`) para evitar leituras repetidas do arquivo em disco.
 - Método `mapear_resultados_para_urls(doc_ids)` que recebe uma lista de DocIDs (inteiros) e retorna as URLs correspondentes, ignorando DocIDs inexistentes.
-- Logs informativos e tratamento de erro quando o arquivo `document_map.json` não é encontrado ou não pode ser lido.
+- **Busca direta por termo no índice invertido:** método `buscar_postings_por_termo(termo)` que retorna todos os DocIDs e frequências para um termo processado, usando leitura incremental eficiente com `ijson`.
+- Logs informativos e tratamento de erro quando o arquivo `document_map.json` ou `indice_invertido.json` não é encontrado ou não pode ser lido.
 - Estrutura preparada para extensão com ranking, cálculo de IDF/TF-IDF e outras funcionalidades de recuperação.
+
 
 ### Contrato (entrada / saída / erros)
 
-- Entrada (mapear_resultados_para_urls): lista de inteiros (DocIDs) — ex: [12, 45, 2]
-- Saída: lista de strings (URLs) correspondentes na mesma ordem dos DocIDs válidos — ex: ["http://...", "https://..."]. DocIDs inválidos são simplesmente ignorados.
-- Modos de erro: se o `document_map.json` não existir ou ocorrer exceção ao carregar, o módulo retorna uma lista vazia e registra mensagem crítica no logger.
+- **mapear_resultados_para_urls**
+    - Entrada: lista de inteiros (DocIDs) — ex: [12, 45, 2]
+    - Saída: lista de strings (URLs) correspondentes na mesma ordem dos DocIDs válidos — ex: ["http://...", "https://..."]. DocIDs inválidos são simplesmente ignorados.
+    - Modos de erro: se o `document_map.json` não existir ou ocorrer exceção ao carregar, o módulo retorna uma lista vazia e registra mensagem crítica no logger.
+- **buscar_postings_por_termo**
+    - Entrada: termo processado (string, após stemming/stopwords)
+    - Saída: dicionário `{doc_id: tf, ...}` com todos os DocIDs e frequências para o termo, ou `None` se não encontrado.
+    - Modos de erro: se o `indice_invertido.json` não existir ou ocorrer exceção ao carregar, retorna `None` e registra mensagem crítica no logger.
 
 ### Fluxo interno
 
@@ -92,21 +100,37 @@ Observação de escalabilidade: o mapa de documentos é mantido inteiro em memó
 - `Processor` / `Relatorio` / `Indexador` devem garantir que `logs/document_map.json` esteja presente (gerado durante a indexação) antes de utilizar o `SearchEngine`.
 - O `SearchEngine` foi escrito como um componente independente e testável (métodos de classe). Futuramente pode-se adicionar instância para manter estado adicional (ex.: índices auxiliares, caches de ranking).
 
+
 ### Como usar / testar
 
-1. Certifique-se de que `logs/document_map.json` existe e é um objeto JSON com o formato {"<DocID>": "<url>", ...}.
-2. No Python, importe e chame:
+#### Busca direta por termo (menu interativo)
+
+1. Certifique-se de que `logs/indice_invertido.json` existe e foi gerado pela indexação.
+2. Execute o launcher principal:
+
+```bash
+python Coletor.py
+```
+
+3. No menu interativo, escolha a opção:
+
+```
+[5] Etapa 3: Busca Direta por Termo no Índice Invertido
+```
+
+4. Digite o termo processado (após stemming/stopwords, ex: "log") quando solicitado. O sistema exibirá até 20 resultados de DocIDs e suas frequências para o termo.
+
+#### Mapeamento de DocIDs para URLs (uso programático)
 
 ```python
 from src.SearchEngine import SearchEngine
-
 urls = SearchEngine.mapear_resultados_para_urls([12, 45, 2])
 print(urls)
 ```
 
-3. Testes unitários recomendados:
-- Chamar `mapear_resultados_para_urls` com DocIDs válidos, inválidos e mistura.
-- Mockar a leitura do arquivo (ou gerar um `document_map.json` temporário) para verificar comportamento de carga e cache.
+#### Testes unitários recomendados
+- Chamar `mapear_resultados_para_urls` e `buscar_postings_por_termo` com entradas válidas, inválidas e mistura.
+- Mockar a leitura dos arquivos (ou gerar arquivos temporários) para verificar comportamento de carga, cache e busca incremental.
 
 ### Execução das Etapas via Linha de Comando
 
@@ -114,12 +138,21 @@ O `Coletor.py` foi atualizado para permitir a execução de cada etapa do proces
 
 | Comando | Descrição |
 | :--- | :--- |
+
+| Comando | Descrição |
+| :--- | :--- |
 | `python Coletor.py --etapa coleta` | **Etapa 1:** Inicia o processo de download e salvamento das páginas HTML. |
 | `python Coletor.py --etapa indexacao` | **Etapa 2:** Constrói o índice invertido e o mapa de documentos a partir dos HTMLs coletados. |
 | `python Coletor.py --etapa idf` | **Etapa 3:** Calcula os pesos IDF para cada termo do vocabulário. |
-| `python Coletor.py --etapa todas` | Executa todas as etapas acima em sequência. |
 | `python Coletor.py --etapa diagnostico`| Roda um script de verificação para contar os arquivos coletados. |
+| `python Coletor.py --etapa todas` | Executa todas as etapas acima em sequência. |
+| `python Coletor.py` | Exibe o menu interativo, incluindo a opção de busca direta por termo no índice invertido. |
 
-Se nenhum argumento for fornecido, o programa exibirá um menu interativo.
 
-**Autor da seção:** implementação em código por Lucas Lima;.
+Se nenhum argumento for fornecido, o programa exibirá um menu interativo, incluindo a opção de busca direta por termo no índice invertido (Etapa 3).
+
+---
+
+**Autor:**
+Luana Almeida @Luana-Almeid
+Data da atualização: 13/11/2025

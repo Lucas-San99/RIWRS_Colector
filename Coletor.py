@@ -22,6 +22,7 @@ try:
     from Relatorio import GeradorRelatorio
     from CalculaIDF import calcula_idf
     from Config import OUTPUT_DIR_TEMP, LOG_DIR_OUTPUT
+    from SearchEngine import SearchEngine
 
 except ImportError as e:
     print("-" * 50)
@@ -103,13 +104,27 @@ def main():
 
 def exibir_menu_interativo():
     """Exibe um menu interativo para o usuário escolher a ação."""
+    def busca_direta_menu():
+        termo = input("Digite o termo processado para busca direta: ").strip()
+        postings = SearchEngine.buscar_postings_por_termo(termo)
+        if postings:
+            print(f"\nPostings encontrados para '{termo}': (mostrando até 20 resultados)")
+            for i, (doc_id, tf) in enumerate(postings.items()):
+                print(f"DocID: {doc_id} | TF: {tf}")
+                if i >= 19:
+                    print("... (resultados truncados)")
+                    break
+        else:
+            print(f"Termo '{termo}' não encontrado no índice invertido.")
+
     menu_opcoes = {
-        '1': ("Executar Todas as Etapas (Coleta -> Indexação -> IDF)", lambda: (rodar_coleta(), rodar_indexacao(), rodar_calculo_idf())),
+        '1': ("Executar Todas as Etapas (Coleta -> Indexação -> IDF -> Busca Direta)", lambda: (rodar_coleta(), rodar_indexacao(), rodar_calculo_idf(), busca_direta_menu())),
         '2': ("Etapa 1: Apenas Coleta e Pós-processamento", rodar_coleta),
         '3': ("Etapa 2: Apenas Indexação", rodar_indexacao),
-        '4': ("Etapa 3: Apenas Cálculo de IDF", rodar_calculo_idf), # TODO: Adicionar busca
-        '5': ("Verificar Saúde do Sistema (Diagnóstico)", rodar_diagnostico),
-        '6': ("Sair", sys.exit)
+        '4': ("Etapa 3: Apenas Cálculo de IDF", rodar_calculo_idf),
+        '5': ("Etapa 3: Busca Direta por Termo no Índice Invertido", busca_direta_menu),
+        '6': ("Verificar Saúde do Sistema (Diagnóstico)", rodar_diagnostico),
+        '7': ("Sair", sys.exit)
     }
 
     while True:
@@ -119,14 +134,12 @@ def exibir_menu_interativo():
         for chave, (descricao, _) in menu_opcoes.items():
             print(f"[{chave}] {descricao}")
         print("-" * 50)
-        
         escolha = input(f"Selecione uma opção (1-{len(menu_opcoes)}): ")
-        
         if escolha in menu_opcoes:
             _, funcao = menu_opcoes[escolha]
             logger.info(f"Opção de menu selecionada: [{escolha}] {menu_opcoes[escolha][0]}")
             funcao()
-            if escolha != '6':
+            if escolha != str(len(menu_opcoes)):
                 print("\nProcesso concluído. Voltando ao menu principal...")
         else:
             logger.warning("Opção inválida. Por favor, tente novamente.")

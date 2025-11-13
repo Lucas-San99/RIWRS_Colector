@@ -4,6 +4,7 @@
 # ==============================================================================
 import os
 import json
+import ijson
 from logging import getLogger
 from Config import LOG_DIR_OUTPUT
 
@@ -13,35 +14,40 @@ logger = getLogger('ColetorLogger')
 DOCUMENT_MAP_FILE = os.path.join(LOG_DIR_OUTPUT, 'document_map.json')
 
 class SearchEngine:
-    """
-    Motor de Busca para o Sistema de Recuperação de Informação.
-    Gerencia o carregamento de índices, cálculos de ranking e mapeamento de DocIDs.
-    """
-    
-    # Armazena o mapa de documentos na memória para acesso rápido (Cache)
-    _document_map = None
+    # Caminho para o arquivo indice_invertido.json (na pasta de logs da raiz do projeto)
+    INDICE_INVERTIDO_FILE = os.path.join(LOG_DIR_OUTPUT, 'indice_invertido.json')
 
     @classmethod
-    def carregar_document_map(cls):
-        """Carrega o mapa de DocID -> URL para a memória."""
-        if cls._document_map is not None:
-            return cls._document_map
-        
-        logger.info("Carregando mapa de documentos...")
-        if not os.path.exists(DOCUMENT_MAP_FILE):
-            logger.critical(f"Arquivo de mapa não encontrado em: {DOCUMENT_MAP_FILE}. A indexação deve ser rodada primeiro.")
+    def buscar_postings_por_termo(cls, termo_processado):
+        """
+        Tarefa de Luana Mateus: Busca direta no índice invertido.
+        Dado um termo processado (após limpeza/stemming), retorna a lista de DocIDs e suas frequências (TF).
+
+        :param termo_processado: Termo já processado (string)
+        :return: Dicionário {doc_id: tf, ...} ou None se termo não encontrado
+        Exemplo de uso:
+            postings = SearchEngine.buscar_postings_por_termo('log')
+            if postings:
+                print(postings)  # {"123": 5, "456": 2, ...}
+        """
+        if not os.path.exists(cls.INDICE_INVERTIDO_FILE):
+            logger.critical(f"Arquivo de índice invertido não encontrado em: {cls.INDICE_INVERTIDO_FILE}. A indexação deve ser rodada primeiro.")
             return None
-        
+
         try:
-            with open(DOCUMENT_MAP_FILE, 'r', encoding='utf-8') as f:
-                # O JSON salva as chaves como strings, mas as chaves são DocIDs (inteiros). 
-                # Converte-se as chaves para inteiros para busca eficiente.
-                map_str = json.load(f)
-                cls._document_map = {int(k): v for k, v in map_str.items()}
-                logger.info(f"Mapa de documentos carregado. Total de entradas: {len(cls._document_map)}")
-                return cls._document_map
+            with open(cls.INDICE_INVERTIDO_FILE, 'r', encoding='utf-8') as f:
+                # Busca incremental usando ijson para não carregar tudo na memória
+                for termo, termo_info in ijson.kvitems(f, ''):
+                    if termo == termo_processado:
+                        if 'postings' in termo_info:
+                            return termo_info['postings']
+                        else:
+                            logger.info(f"Termo '{termo_processado}' não possui postings no índice.")
+                            return None
+                logger.info(f"Termo '{termo_processado}' não encontrado no índice.")
+                return None
         except Exception as e:
-            logger.critical(f"Erro ao carregar document_map.json: {e}")
+            logger.critical(f"Erro ao buscar termo no indice_invertido.json: {e}")
             return None
 
     @classmethod
