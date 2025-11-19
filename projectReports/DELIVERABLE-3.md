@@ -159,6 +159,68 @@ Data da atualização: 13/11/2025
 
 ### Implementação da Métrica de Similaridade (Entrega 3)
 
+### Objetivo
+
+A métrica de Similaridade do Cosseno tem como objetivo ranquear os documentos coletados e indexados de acordo com a relevância em relação a uma consulta do usuário. Ela é parte central da Etapa 3, sendo responsável por transformar o índice invertido em resultados ordenados por importância semântica. Essa métrica é baseada em vetores de pesos TF-IDF, medindo o “ângulo” entre o vetor da consulta e o vetor de cada documento.
+
+### Implementação
+
+A implementação foi feita no arquivo:
+src/SearchEngine.py
+
+Foram criados três novos métodos dentro da classe SearchEngine:
+- similaridade_cosseno():	Calcula a similaridade entre dois vetores TF-IDF (consulta × documento).
+- calcular_pesos_tf_idf(): Aplica o IDF sobre as frequências de termos (TF) para gerar o vetor ponderado.
+- ranquear_documentos(): Gera o ranking completo, ordenando os documentos por relevância decrescente.
+
+Esses métodos trabalham em conjunto com os módulos:
+- CalculaIDF.py: Responsável por gerar os valores de IDF (Etapa 3.1).
+- Indexador.py: Responsável por gerar o índice invertido (Etapa 2).
+- Coletor.py: Integra o menu interativo e exibe o resultado ranqueado.
+
+### Integração
+
+O método ranquear_documentos() é chamado a partir da função:
+busca_com_ranking_menu() no arquivo Coletor.py.
+
+Fluxo integrado:
+- Usuário → Coletor.py → SearchEngine.ranquear_documentos() → TF-IDF + Cosine → URLs ranqueadas
+
+Além disso, o método mapear_resultados_para_urls() é usado para traduzir os doc_ids ranqueados em URLs originais, com base no arquivo document_map.json.
+
+### Como usar / testar
+
+Pré-requisitos:
+Antes de executar o ranking TF-IDF, as etapas anteriores precisam estar completas, pois o método ranquear_documentos() depende de arquivos gerados nas fases de coleta, indexação e cálculo de IDF.
+
+Esses arquivos devem existir na pasta logs/:
+- indice_invertido.json: Contém os termos e suas ocorrências (TF) em cada documento.
+- idf.json: Contém o peso IDF de cada termo, usado para ponderar os vetores TF-IDF.
+- document_map.json: Mapeia o DocID interno para a URL original.
+
+Se qualquer um desses arquivos estiver ausente, o ranking não será executado e o sistema exibirá uma mensagem de erro, como:
+- Erro ao executar a busca ranqueada: [Errno 2] No such file or directory: 'logs/idf.json'
+
+Nesse caso, basta rodar as etapas anteriores para gerar os arquivos necessários.
+
+Execute o sistema interativo:
+python Coletor.py
+
+Escolha no menu:
+[6] Etapa 5: Busca com Ranking TF-IDF (Similaridade do Cosseno)
+
+Digite uma consulta, por exemplo:
+phishing banco login
+
+O sistema exibirá algo como:
+Top 10 Resultados Ranqueados (TF-IDF + Similaridade do Cosseno):
+[1] DocID: 123 | Score: 0.8421 → http://exemplo.com/phishing123
+[2] DocID: 98  | Score: 0.7654 → http://exemplo.com/banco_fake
+
+Logs de execução são gravados em:
+logs/riwrs.log
+
+---
 **Autor:**
 Ana Paula de Oliveira
 Data da atualização: 19/11/2025
