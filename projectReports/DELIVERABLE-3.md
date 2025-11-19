@@ -156,3 +156,9 @@ Se nenhum argumento for fornecido, o programa exibirá um menu interativo, inclu
 **Autor:**
 Luana Almeida @Luana-Almeid
 Data da atualização: 13/11/2025
+
+### Implementação da Métrica de Similaridade (Entrega 3)
+
+**Autor:**
+Ana Paula de Oliveira
+Data da atualização: 19/11/2025
