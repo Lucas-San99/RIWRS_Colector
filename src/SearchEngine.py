@@ -5,8 +5,19 @@
 import os
 import json
 import ijson
+import re
+import math
 from logging import getLogger
 from Config import LOG_DIR_OUTPUT
+from collections import defaultdict
+
+try:
+    from Indexador import STOPWORDS, STEMMER
+except ImportError:
+    # Fallback caso o NLTK não esteja instalado
+    print("Aviso: Não foi possível carregar STOPWORDS/STEMMER do Indexador.")
+    STOPWORDS = set()
+    STEMMER = lambda x: x
 
 logger = getLogger('ColetorLogger')
 
@@ -16,6 +27,58 @@ DOCUMENT_MAP_FILE = os.path.join(LOG_DIR_OUTPUT, 'document_map.json')
 class SearchEngine:
     # Caminho para o arquivo indice_invertido.json (na pasta de logs da raiz do projeto)
     INDICE_INVERTIDO_FILE = os.path.join(LOG_DIR_OUTPUT, 'indice_invertido.json')
+
+    IDF_FILE = os.path.join(LOG_DIR_OUTPUT, 'idf.json')
+    _idf_map = None
+
+    @classmethod
+    def _carregar_idf_map(cls):
+        """
+        Carrega o mapa de IDF (gerado pelo CalculaIDF.py) em memória.
+        Usa um cache simples para evitar recarregar o arquivo.
+        """
+        if cls._idf_map:
+            return cls._idf_map
+        
+        if not os.path.exists(cls.IDF_FILE):
+            logger.critical(f"Arquivo IDF não encontrado: {cls.IDF_FILE}.")
+            logger.critical("Execute o script 'CalculaIDF.py' primeiro.")
+            return None
+
+        try:
+            with open(cls.IDF_FILE, 'r', encoding='utf-8') as f:
+                cls._idf_map = json.load(f)
+            logger.info(f"Mapa IDF carregado com {len(cls._idf_map)} termos.")
+            return cls._idf_map
+        except Exception as e:
+            logger.critical(f"Falha ao carregar ou processar {cls.IDF_FILE}: {e}")
+            return None
+
+    @staticmethod
+    def _processar_texto_query(texto_query: str):
+        """
+        Aplica O MESMO pipeline de processamento do Indexador (Etapa 2.1)
+        a uma string de consulta (que não contém HTML).
+        
+        Esta é uma cópia da lógica de Indexador.limpar_e_tokenizar,
+        mas pulando a etapa de extração de HTML (BeautifulSoup).
+        """
+        
+        # 1. Normalização (copiado de Indexador.py)
+        # Mantém letras e acentos, remove pontuação/números, e .lower()
+        limpo = re.sub(r'[^a-zA-ZáéíóúàèìòùãõâêîôûçÁÉÍÓÚÀÈÌÒÙÃÕÂÊÎÔÛÇ\s]', '', texto_query).lower()
+        
+        # 2. Tokenização (copiado de Indexador.py)
+        tokens = limpo.split()
+        
+        tokens_processados = []
+        for token in tokens:
+            # 3. Filtra stopwords e tokens curtos (copiado de Indexador.py)
+            if token not in STOPWORDS and len(token) > 2:
+                # 4. Stemming (copiado de Indexador.py)
+                tokens_processados.append(STEMMER.stem(token))
+        
+        return tokens_processados
 
     @classmethod
     def buscar_postings_por_termo(cls, termo_processado):
@@ -74,4 +137,50 @@ class SearchEngine:
         
         return urls_ranqueadas
 
-# O restante da classe SearchEngine (ranking, IDF, etc.) será adicionado pelos outros colaboradores.
+    @classmethod
+    def gerar_vetor_consulta_tfidf(cls, query_string: str):
+        """
+        Módulo que recebe a string de consulta do usuário, 
+        aplica o mesmo pipeline de Limpeza/Stemming/Stopwords e 
+        gera o vetor de features TF-IDF para a busca.
+
+        :param query_string: A busca do usuário
+        :return: Dicionário com o vetor de pesos.
+        """
+        
+        # 1. Carregar o mapa IDF (usa cache)
+        idf_map = cls._carregar_idf_map()
+        if idf_map is None:
+            logger.error("Não é possível gerar o vetor da consulta, o mapa IDF não está disponível.")
+            return {}
+
+        # 2. Aplicar o pipeline de processamento
+        tokens_processados = cls._processar_texto_query(query_string)
+        
+        if not tokens_processados:
+            logger.warning(f"Consulta '{query_string}' resultou em zero tokens após processamento.")
+            return {}
+
+        # 3. Calcular o TF (Term Frequency) da consulta
+        tf_consulta = defaultdict(int)
+        for token in tokens_processados:
+            tf_consulta[token] += 1
+        
+        # 4. Calcular o peso TF-IDF para cada termo na consulta
+        vetor_tfidf = {}
+        
+        for termo, tf in tf_consulta.items():
+            
+            # Pega o IDF pré-calculado do mapa
+            idf = idf_map.get(termo, 0)
+            
+            # Se idf == 0, o termo não está em nenhum documento
+            # (ou não estava no índice), então seu peso na busca é 0.
+            if idf > 0:
+                # W_t,q = TF_t,q * IDF_t
+                # (Estamos usando TF bruto * IDF)
+                peso = tf * idf
+                vetor_tfidf[termo] = peso
+        
+        logger.info(f"Consulta '{query_string}' -> Vetor TF-IDF: {vetor_tfidf}")
+        return vetor_tfidf
