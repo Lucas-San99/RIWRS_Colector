@@ -157,7 +157,7 @@ Se nenhum argumento for fornecido, o programa exibirá um menu interativo, inclu
 Luana Almeida @Luana-Almeid
 Data da atualização: 13/11/2025
 
-### Implementação da Métrica de Similaridade (Entrega 3)
+# Implementação da Métrica de Similaridade (Entrega 3)
 
 ### Objetivo
 
@@ -190,8 +190,7 @@ Além disso, o método mapear_resultados_para_urls() é usado para traduzir os d
 
 ### Como usar / testar
 
-Pré-requisitos:
-Antes de executar o ranking TF-IDF, as etapas anteriores precisam estar completas, pois o método ranquear_documentos() depende de arquivos gerados nas fases de coleta, indexação e cálculo de IDF.
+- Pré-requisitos: Antes de executar o ranking TF-IDF, as etapas anteriores precisam estar completas, pois o método ranquear_documentos() depende de arquivos gerados nas fases de coleta, indexação e cálculo de IDF.
 
 Esses arquivos devem existir na pasta logs/:
 - indice_invertido.json: Contém os termos e suas ocorrências (TF) em cada documento.
@@ -203,22 +202,17 @@ Se qualquer um desses arquivos estiver ausente, o ranking não será executado e
 
 Nesse caso, basta rodar as etapas anteriores para gerar os arquivos necessários.
 
-Execute o sistema interativo:
-python Coletor.py
+- Execute o sistema interativo: python Coletor.py
 
-Escolha no menu:
-[6] Etapa 5: Busca com Ranking TF-IDF (Similaridade do Cosseno)
+- Escolha no menu: [6] Etapa 5: Busca com Ranking TF-IDF (Similaridade do Cosseno)
 
-Digite uma consulta, por exemplo:
-phishing banco login
+- Digite uma consulta, por exemplo: phishing banco login
 
-O sistema exibirá algo como:
-Top 10 Resultados Ranqueados (TF-IDF + Similaridade do Cosseno):
-[1] DocID: 123 | Score: 0.8421 → http://exemplo.com/phishing123
-[2] DocID: 98  | Score: 0.7654 → http://exemplo.com/banco_fake
+O sistema exibirá algo como, Top 10 Resultados Ranqueados (TF-IDF + Similaridade do Cosseno):
+- [1] DocID: 123 | Score: 0.8421 → http://exemplo.com/phishing123
+- [2] DocID: 98  | Score: 0.7654 → http://exemplo.com/banco_fake
 
-Logs de execução são gravados em:
-logs/riwrs.log
+- Logs de execução são gravados em: logs/riwrs.log
 
 ---
 **Autor:**
