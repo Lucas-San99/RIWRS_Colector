@@ -103,7 +103,7 @@ def main():
         exibir_menu_interativo()
 
 def exibir_menu_interativo():
-    """Exibe um menu interativo para o usuário escolher a ação."""
+    """Exibe um menu interativo para o usuário escolher a ação.."""
     def busca_direta_menu():
         termo = input("Digite o termo processado para busca direta: ").strip()
         postings = SearchEngine.buscar_postings_por_termo(termo)
