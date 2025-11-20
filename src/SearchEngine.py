@@ -78,8 +78,8 @@ class SearchEngine:
     @staticmethod
     def similaridade_cosseno(vetor1: dict, vetor2: dict) -> float:
         """
-            Tarefa de Ana Paula: Calcula a Similaridade do Cosseno entre dois vetores TF-IDF.
-            Cada vetor deve ser um dicionário {termo: peso_TF_IDF}.
+        Tarefa de Ana Paula: Calcula a Similaridade do Cosseno entre dois vetores TF-IDF.
+        Cada vetor deve ser um dicionário {termo: peso_TF_IDF}.
         """
         numerador = sum(vetor1[t] * vetor2[t] for t in vetor1 if t in vetor2)
         norma1 = math.sqrt(sum(p ** 2 for p in vetor1.values()))
