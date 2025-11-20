@@ -23,6 +23,7 @@ try:
     from CalculaIDF import calcula_idf
     from Config import OUTPUT_DIR_TEMP, LOG_DIR_OUTPUT
     from SearchEngine import SearchEngine
+    from CLI import CLI
 
 except ImportError as e:
     print("-" * 50)
@@ -67,6 +68,12 @@ def rodar_diagnostico():
     health_check_sistema()
     logger.info("DIAGNÓSTICO: Verificação finalizada.")
 
+def rodar_busca_interativa():
+    """Executa a CLI interativa de busca (Etapa 3 - Ana Clara)."""
+    logger.info("MODO INTERATIVO DE BUSCA: Iniciando interface CLI.")
+    CLI.modo_interativo()
+    logger.info("MODO INTERATIVO DE BUSCA: Finalizado.")
+
 # ==============================================================================
 # CONTROLE DE EXECUÇÃO (ARGPARSE E MENU)
 # ==============================================================================
@@ -77,8 +84,8 @@ def main():
     parser.add_argument(
         '--etapa',
         type=str,
-        choices=['coleta', 'indexacao', 'idf', 'diagnostico', 'todas'],
-        help="Especifica a etapa a ser executada: 'coleta', 'indexacao', 'idf', 'diagnostico' ou 'todas'."
+        choices=['coleta', 'indexacao', 'idf', 'diagnostico', 'busca', 'todas'],
+        help="Especifica a etapa a ser executada: 'coleta', 'indexacao', 'idf', 'diagnostico', 'busca' ou 'todas'."
     )
 
     args = parser.parse_args()
@@ -92,6 +99,8 @@ def main():
             rodar_calculo_idf()
         elif args.etapa == 'diagnostico':
             rodar_diagnostico()
+        elif args.etapa == 'busca':
+            rodar_busca_interativa()
         elif args.etapa == 'todas':
             logger.info("Executando todas as etapas em sequência...")
             rodar_coleta()
@@ -158,8 +167,9 @@ def exibir_menu_interativo():
         '4': ("Etapa 3: Apenas Cálculo de IDF", rodar_calculo_idf),
         '5': ("Etapa 4: Busca Direta por Termo no Índice Invertido", busca_direta_menu),
         '6': ("Etapa 5: Busca com Ranking TF-IDF (Similaridade do Cosseno)", busca_com_ranking_menu),
-        '7': ("Verificar Saúde do Sistema (Diagnóstico)", rodar_diagnostico),
-        '8': ("Sair", sys.exit)
+        '7': ("Etapa 6: Modo Interativo de Busca (CLI)", rodar_busca_interativa),
+        '8': ("Verificar Saúde do Sistema (Diagnóstico)", rodar_diagnostico),
+        '9': ("Sair", sys.exit)
     }
 
     while True:

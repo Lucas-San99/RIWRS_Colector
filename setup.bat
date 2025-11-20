@@ -51,5 +51,10 @@ echo.
 echo Depois, voce pode rodar o programa principal:
 echo   python Coletor.py
 echo.
+echo Para usar a interface de busca (CLI):
+echo   python Coletor.py --etapa busca
+echo.
+echo Para mais informacoes, abra o arquivo README.md
+echo.
 
 pause

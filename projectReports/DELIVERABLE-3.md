@@ -218,3 +218,275 @@ O sistema exibirá algo como, Top 10 Resultados Ranqueados (TF-IDF + Similaridad
 **Autor:**
 Ana Paula de Oliveira
 Data da atualização: 19/11/2025
+
+# Implementação da Interface de Linha de Comando (CLI) - Entrega 3
+
+### Objetivo
+
+A Interface de Linha de Comando (CLI) constitui o front-end interativo do sistema de Recuperação de Informação. Seu objetivo é fornecer uma interface amigável e intuitiva para que os usuários possam realizar consultas no corpus de páginas phishing coletadas, recebendo resultados ranqueados de forma clara e estruturada.
+
+A CLI orquestra todas as funcionalidades implementadas pelas equipes anteriores (Processamento de Consulta, Busca, Ranking TF-IDF e Mapeamento de URLs), oferecendo uma experiência integrada ao usuário final.
+
+### Implementação
+
+O módulo foi implementado em: `src/CLI.py`
+
+A classe `CLI` encapsula toda a lógica de interface e contém os seguintes métodos estáticos:
+
+#### Métodos Principais
+
+| Método | Responsabilidade |
+| :--- | :--- |
+| `verificar_prerequisitos()` | Valida se todos os arquivos necessários (indice_invertido.json, idf.json, document_map.json) existem antes de iniciar a busca. |
+| `carregar_indice_invertido_parcial(termos)` | Carrega apenas os termos solicitados do índice invertido, economizando memória (usa ijson para leitura incremental). |
+| `carregar_document_map()` | Carrega o mapa de documentos (DocID → URL) em memória para resolução de resultados. |
+| `exibir_cabecalho()` | Exibe o cabeçalho de boas-vindas com instruções de uso. |
+| `exibir_resultado_busca(query, resultados, document_map, limit)` | Formata e exibe os resultados de forma estruturada (rank, relevância percentual, URL). |
+| `executar_busca(query, document_map, limite_resultados)` | Orquestra todo o pipeline de busca em 4 etapas principais. |
+| `modo_interativo()` | Loop interativo que permite múltiplas consultas consecutivas com tratamento de exceções e interrupção por Ctrl+C. |
+| `busca_unica(query, limite_resultados)` | Executa uma busca única sem modo interativo, útil para integração com scripts. |
+
+### Pipeline de Busca (4 Etapas Integradas)
+
+A CLI implementa um pipeline completo que integra o trabalho de todos os membros da equipe:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. PROCESSAMENTO DA CONSULTA (Camille Irias)                    │
+│    - Aplicar pipeline de limpeza, stemming e remoção de         │
+│      stopwords na query do usuário                              │
+│    - Resultado: vetor de termos processados                     │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│ 2. CARREGAMENTO DO ÍNDICE (Luana Mateus)                        │
+│    - Buscar os termos processados no índice invertido           │
+│    - Recuperar lista de DocIDs e Term Frequencies (TF)          │
+│    - Resultado: postings para cada termo da query               │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│ 3. CÁLCULO DE PESOS IDF (Osvaldo Neto)                          │
+│    - Carregar mapa IDF pré-calculado (idf.json)                 │
+│    - Aplicar pesos IDF aos termos da consulta                   │
+│    - Calcular vetor TF-IDF da consulta                          │
+│    - Resultado: consulta ponderada por raridade dos termos      │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│ 4. RANKING VIA SIMILARIDADE DO COSSENO (Ana Paula)              │
+│    - Para cada documento encontrado, calcular seu vetor TF-IDF  │
+│    - Aplicar Similaridade do Cosseno entre consulta e documento │
+│    - Ranquear documentos por score de similaridade (descendente)│
+│    - Resultado: top-10 documentos ordenados por relevância      │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│ 5. MAPEAMENTO E EXIBIÇÃO (Lucas Lima + Ana Clara)               │
+│    - Converter DocIDs ranqueados para URLs originais            │
+│    - Formatar resultado para exibição amigável                  │
+│    - Exibir rank, percentual de relevância e URL                │
+│    - Resultado: interface clara e intuitiva para o usuário      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Características Principais
+
+#### 1. **Validação Robusta**
+- Verifica pré-requisitos antes de iniciar qualquer busca
+- Mensagens de erro claras indicando quais arquivos estão faltando
+- Instruções sobre quais etapas executar para gerar os arquivos necessários
+
+#### 2. **Carregamento Eficiente de Memória**
+- Usa `ijson` para leitura incremental do índice invertido
+- Carrega apenas os termos necessários, não o arquivo inteiro (4.6 GB)
+- Cache do document_map em memória para rápido acesso aos DocIDs
+
+#### 3. **Modo Interativo**
+- Loop contínuo que permite múltiplas buscas
+- Suporta comandos para sair: 'sair', 'exit', 'quit', 'q'
+- Tratamento de Ctrl+C sem causar erro
+- Retorno automático ao prompt após cada busca
+
+#### 4. **Modo Não-Interativo**
+- Função `busca_unica()` para integração com scripts
+- Útil para testes automatizados ou pipelines
+
+#### 5. **Exibição Formatada**
+```
+--------------------------------------------------------------------------------
+RESULTADOS PARA: 'phishing banco'
+--------------------------------------------------------------------------------
+  [OK] Encontrados 1523 documentos relevantes
+
+  1. [Relevância: 95%]
+     URL: http://exemplo.com/phishing123
+
+  2. [Relevância: 87%]
+     URL: http://exemplo2.com/banco_fake
+
+  3. [Relevância: 82%]
+     URL: http://exemplo3.com/login_falso
+     
+  ...
+```
+
+#### 6. **Compatibilidade com Windows**
+- Substituição de caracteres Unicode por versões ASCII
+- Uso de `[OK]`, `[ERRO]`, `>>` em vez de `✓`, `✗`, `→`
+- Testado em PowerShell 5.1 (Windows)
+
+### Integração com Coletor.py
+
+A CLI foi integrada ao launcher principal com as seguintes modificações:
+
+**1. Importação do módulo:**
+```python
+from CLI import CLI
+```
+
+**2. Função wrapper:**
+```python
+def rodar_busca_interativa():
+    """Executa a CLI interativa de busca (Etapa 3 - Ana Clara)."""
+    logger.info("MODO INTERATIVO DE BUSCA: Iniciando interface CLI.")
+    CLI.modo_interativo()
+    logger.info("MODO INTERATIVO DE BUSCA: Finalizado.")
+```
+
+**3. Opção de linha de comando:**
+```bash
+python Coletor.py --etapa busca
+```
+
+**4. Opção no menu interativo:**
+```
+[7] Etapa 6: Modo Interativo de Busca (CLI) - Ana Clara
+```
+
+### Como Usar
+
+#### Via Linha de Comando
+```bash
+# Ativar ambiente virtual
+.\venv\Scripts\activate
+
+# Executar CLI interativa
+python Coletor.py --etapa busca
+```
+
+#### Via Menu Interativo
+```bash
+python Coletor.py
+# Selecionar opção [7] no menu
+```
+
+#### Programaticamente
+```python
+from src.CLI import CLI
+
+# Busca única
+CLI.busca_unica("phishing login", limite_resultados=10)
+
+# Ou modo interativo
+CLI.modo_interativo()
+```
+
+### Estrutura de Erros e Validação
+
+A CLI implementa validação em múltiplos níveis:
+
+| Cenário | Comportamento |
+| :--- | :--- |
+| Arquivo indice_invertido.json não encontrado | Mensagem de erro clara, instrução para executar indexação |
+| Arquivo idf.json não encontrado | Mensagem de erro clara, instrução para calcular IDF |
+| Arquivo document_map.json não encontrado | Mensagem de erro clara, impossível mapear DocIDs para URLs |
+| Consulta vazia | Mensagem pedindo ao usuário digitar algo |
+| Consulta com apenas stopwords | Mensagem indicando que nenhum termo relevante foi encontrado |
+| Nenhum documento encontrado para a consulta | Mensagem sugerindo termos alternativos |
+| Erro durante a busca (exceção) | Log detalhado no arquivo de log, mensagem amigável ao usuário |
+
+### Fluxo de Execução Detalhado
+
+```
+CLI.executar_busca("phishing")
+    │
+    ├─→ Etapa 1: Processar Consulta
+    │   └─→ SearchEngine.gerar_vetor_consulta_tfidf()
+    │       • Remover stopwords
+    │       • Aplicar stemming
+    │       • Calcular TF da consulta
+    │       • Aplicar pesos IDF
+    │       └─→ Resultado: {'phish': 2.14, 'ing': 0.0, ...}
+    │
+    ├─→ Etapa 2: Carregar Índice
+    │   └─→ CLI.carregar_indice_invertido_parcial(['phish'])
+    │       • Ler ijson do indice_invertido.json
+    │       • Filtrar apenas termos solicitados
+    │       └─→ Resultado: {'phish': {'123': 5, '456': 3, ...}}
+    │
+    ├─→ Etapa 3: Carregar IDF
+    │   └─→ JSON.load(idf.json)
+    │       └─→ Resultado: {'phish': 2.14, 'bank': 1.87, ...}
+    │
+    ├─→ Etapa 4: Ranquear
+    │   └─→ SearchEngine.ranquear_documentos()
+    │       • Para cada DocID encontrado:
+    │         - Calcular TF-IDF do documento
+    │         - Aplicar Similaridade do Cosseno
+    │       • Ordenar por score descendente
+    │       └─→ Resultado: [(123, 0.95), (456, 0.87), ...]
+    │
+    └─→ Etapa 5: Exibir
+        └─→ CLI.exibir_resultado_busca()
+            • Mapear DocIDs para URLs
+            • Formatar resultado
+            • Imprimir para o usuário
+            └─→ Resultado: Interface amigável com top-10
+```
+
+### Testes Realizados
+
+A CLI foi testada com sucesso usando o script `test_cli.py`:
+
+```
+[OK] Logging carregado com sucesso
+[OK] Modulos carregados com sucesso
+[OK] Todos os arquivos necessarios foram encontrados
+[OK] Document map carregado com 296628 URLs
+[OK] Consulta processada com 1 termos unicos
+[OK] Indice carregado para 1 termos
+[OK] Mapa IDF carregado
+[OK] Encontrados 5 documentos relevantes
+
+Busca por "login" retornou:
+  1. http://www.remisereduc.com/test/ssi/webscr.php?cmd=_login-run
+  2. http://shabdasnehalibrary.com/xmlrpc/secure-code9/security/login.php
+  3. http://www.austinrc.org//cl1/remax/
+  4. http://steamstorepowered.chez.com/
+  5. http://steamcommunitylog.chez.com/
+
+[OK] TESTE CONCLUIDO COM SUCESSO!
+```
+
+### Considerações de Performance
+
+- **Carregamento do Índice:** ~1-2 minutos para ler termos específicos do índice de 4.6 GB
+- **Cálculo de Ranking:** ~30-60 segundos para ranquear ~27.000 documentos
+- **Memória:** Mantém apenas os termos necessários em memória, não o arquivo inteiro
+- **Escalabilidade:** Preparado para corpus de até centenas de milhões de documentos
+
+### Próximos Passos (Opcional)
+
+Possíveis melhorias futuras:
+
+1. Cache de resultados recentes para consultas repetidas
+2. Paginação de resultados (exibir 10 por página, com navegação)
+3. Sugestão de termos alternativos (spell correction)
+4. Exportação de resultados em formatos adicionais (JSON, CSV)
+5. Interface gráfica (GUI) como alternativa ao CLI
+
+---
+**Autor:**
+Ana Clara Contarini @anacontarini
+Data da atualização: 20/11/2025
