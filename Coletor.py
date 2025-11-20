@@ -117,14 +117,49 @@ def exibir_menu_interativo():
         else:
             print(f"Termo '{termo}' não encontrado no índice invertido.")
 
+    def busca_com_ranking_menu():
+        """Executa busca completa com cálculo de Similaridade do Cosseno (Etapa 3)."""
+        termo = input("Digite sua consulta (texto livre): ").strip()
+        if not termo:
+            print("Consulta vazia. Tente novamente.")
+            return
+        try:
+            from src.Config import LOG_DIR_OUTPUT
+            import json, os
+
+            with open(os.path.join(LOG_DIR_OUTPUT, 'indice_invertido.json'), 'r', encoding='utf-8') as f:
+                indice_invertido = json.load(f)
+            with open(os.path.join(LOG_DIR_OUTPUT, 'idf.json'), 'r', encoding='utf-8') as f:
+                idf_map = json.load(f)
+
+            termos = termo.lower().split()
+            consulta_tf = {}
+            for t in termos:
+                consulta_tf[t] = consulta_tf.get(t, 0) + 1
+
+            ranking = SearchEngine.ranquear_documentos(consulta_tf, indice_invertido, idf_map)
+            doc_ids_ordenados = [doc_id for doc_id, _ in ranking]
+            urls = SearchEngine.mapear_resultados_para_urls(doc_ids_ordenados)
+
+            print("\nTop 10 Resultados Ranqueados (TF-IDF + Similaridade do Cosseno):")
+            for i, (doc_id, score) in enumerate(ranking[:10]):
+                url = urls[i] if i < len(urls) else "(URL não encontrada)"
+                print(f"[{i+1}] DocID: {doc_id} | Score: {score:.4f}")
+                print(f"     → {url}")
+            print("\nBusca concluída.\n")
+
+        except Exception as e:
+            print(f"Erro ao executar a busca ranqueada: {e}")
+
     menu_opcoes = {
         '1': ("Executar Todas as Etapas (Coleta -> Indexação -> IDF -> Busca Direta)", lambda: (rodar_coleta(), rodar_indexacao(), rodar_calculo_idf(), busca_direta_menu())),
         '2': ("Etapa 1: Apenas Coleta e Pós-processamento", rodar_coleta),
         '3': ("Etapa 2: Apenas Indexação", rodar_indexacao),
         '4': ("Etapa 3: Apenas Cálculo de IDF", rodar_calculo_idf),
-        '5': ("Etapa 3: Busca Direta por Termo no Índice Invertido", busca_direta_menu),
-        '6': ("Verificar Saúde do Sistema (Diagnóstico)", rodar_diagnostico),
-        '7': ("Sair", sys.exit)
+        '5': ("Etapa 4: Busca Direta por Termo no Índice Invertido", busca_direta_menu),
+        '6': ("Etapa 5: Busca com Ranking TF-IDF (Similaridade do Cosseno)", busca_com_ranking_menu),
+        '7': ("Verificar Saúde do Sistema (Diagnóstico)", rodar_diagnostico),
+        '8': ("Sair", sys.exit)
     }
 
     while True:
