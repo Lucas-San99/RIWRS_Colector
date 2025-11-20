@@ -137,6 +137,54 @@ class SearchEngine:
         
         return urls_ranqueadas
 
+    @staticmethod
+    def similaridade_cosseno(vetor1: dict, vetor2: dict) -> float:
+        """
+        Tarefa de Ana Paula: Calcula a Similaridade do Cosseno entre dois vetores TF-IDF.
+        Cada vetor deve ser um dicionário {termo: peso_TF_IDF}.
+        """
+        numerador = sum(vetor1[t] * vetor2[t] for t in vetor1 if t in vetor2)
+        norma1 = math.sqrt(sum(p ** 2 for p in vetor1.values()))
+        norma2 = math.sqrt(sum(p ** 2 for p in vetor2.values()))
+        if norma1 == 0 or norma2 == 0:
+            return 0.0
+        return numerador / (norma1 * norma2)
+
+    @classmethod
+    def calcular_pesos_tf_idf(cls, termos_tf: dict, idf_map: dict) -> dict:
+        """
+        Retorna o vetor TF-IDF aplicando o IDF correspondente a cada termo.
+        """
+        return {t: tf * idf_map.get(t, 0.0) for t, tf in termos_tf.items()}
+
+    @classmethod
+    def ranquear_documentos(cls, consulta_tf: dict, indice_invertido: dict, idf_map: dict, limite: int = 10):
+        """
+        Ranqueia documentos com base na Similaridade do Cosseno entre
+        o vetor TF-IDF da consulta e os vetores TF-IDF dos documentos..
+        """
+        logger.info("Iniciando cálculo de ranking via Similaridade do Cosseno...")
+
+        consulta_tfidf = cls.calcular_pesos_tf_idf(consulta_tf, idf_map)
+
+        documentos_vetores = {}
+        for termo, peso_consulta in consulta_tfidf.items():
+            if termo not in indice_invertido:
+                continue
+            for doc_id, tf_doc in indice_invertido[termo].items():
+                if doc_id not in documentos_vetores:
+                    documentos_vetores[doc_id] = {}
+                documentos_vetores[doc_id][termo] = tf_doc * idf_map.get(termo, 0.0)
+
+        scores = {
+            int(doc_id): cls.similaridade_cosseno(consulta_tfidf, vetor_doc)
+            for doc_id, vetor_doc in documentos_vetores.items()
+        }
+
+        ranking_ordenado = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        logger.info(f"Ranking concluído. {len(ranking_ordenado)} documentos ranqueados.")
+        return ranking_ordenado[:limite]
+
     @classmethod
     def gerar_vetor_consulta_tfidf(cls, query_string: str):
         """
