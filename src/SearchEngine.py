@@ -99,7 +99,7 @@ class SearchEngine:
     def ranquear_documentos(cls, consulta_tf: dict, indice_invertido: dict, idf_map: dict, limite: int = 10):
         """
         Ranqueia documentos com base na Similaridade do Cosseno entre
-        o vetor TF-IDF da consulta e os vetores TF-IDF dos documentos.
+        o vetor TF-IDF da consulta e os vetores TF-IDF dos documentos..
         """
         logger.info("Iniciando cálculo de ranking via Similaridade do Cosseno...")
 
