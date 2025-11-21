@@ -490,3 +490,57 @@ Possíveis melhorias futuras:
 **Autor:**
 Ana Clara Contarini @anacontarini
 Data da atualização: 20/11/2025
+
+
+**Autor:**
+Camille Irias Gonçalves @CamilleIrias
+Data da atualização: 19/11/2025
+
+# Implementação da Métrica de Similaridade (Entrega 3)
+
+### Objetivo
+
+Método responsável por ser a porta de entrada do Motor de Busca, recebendo a string de consulta em linguagem natural inserida pelo usuário e convertendo-a em uma representação matemática (vetor de pesos TF-IDF). 
+### Implementação
+
+### 2.1. Consistência do Pipeline de Processamento
+Para evitar problemas com "descasamento de vocabulário", onde termos relevantes na busca não são encontrados porque sofreram processamentos diferentes durante a indexação, foi implementado o método `gerar_vetor_consulta_tfidf` na classe `SearchEngine` que reutiliza estritamente os mesmos recursos linguísticos definidos na classe `Indexador`:
+
+* **Normalização:** Aplicação de *lowercase* e remoção de caracteres especiais (pontuação e números) via Regex, preservando a acentuação padrão da língua portuguesa.
+* **Stopwords:** Utilização do mesmo conjunto de *stopwords* (NLTK) importado diretamente do módulo de indexação.
+* **Stemming:** Aplicação do algoritmo *SnowballStemmer* (Portuguese) para a redução de palavras aos seus radicais (ex: "recuperação" $\rightarrow$ "recuper"), garantindo que variações morfológicas sejam tratadas como o mesmo termo.
+
+### 2.2. Integração com o Modelo Vetorial (TF-IDF)
+O sistema adota o Modelo Vetorial para a ponderação dos termos. Para a consulta ($q$), o peso de cada termo ($t$) é calculado conforme a fórmula:
+
+$$w_{t,q} = tf_{t,q} \times idf_t$$
+
+Onde:
+* **$tf_{t,q}$ (Term Frequency):** Representa a frequência bruta do termo na consulta do usuário.
+* **$idf_t$ (Inverse Document Frequency):** Representa o valor de raridade do termo no corpus completo. Este valor é recuperado do arquivo `idf.json` (gerado na Etapa 2), assegurando que termos raros e discriminantes recebam maior peso no ranking final.
+
+### 3. Métodos Principais Desenvolvidos
+
+Foram criados de três métodos interconectados:
+
+* **`gerar_vetor_consulta_tfidf(query_string)`**: Método público principal. Orquestra todo o fluxo: solicita o carregamento do IDF, chama o processamento de texto, calcula a frequência dos termos (TF) na consulta e retorna o dicionário final com os pesos $TF \times IDF$.
+* **`_processar_texto_query(texto_query)`**: Método auxiliar privado. Replica a lógica de limpeza de dados da Etapa 2 (Indexação), aplicando normalização, remoção de *stopwords* e *stemming* na string de busca. Garante que a consulta "fale a mesma língua" do índice.
+* **`_carregar_idf_map()`**: Método auxiliar de gerenciamento de recursos. Verifica a existência do arquivo `idf.json`, carrega seu conteúdo para a memória RAM e implementa um *cache* simples para evitar leituras de disco repetitivas em buscas subsequentes.
+
+### 5. Como Usar e Testar
+
+Para validar a implementação isoladamente (Teste Unitário), foi criado um script de verificação na raiz do projeto local.
+
+**Exemplo de uso do módulo:**
+```python
+from SearchEngine import SearchEngine
+
+# 1. Entrada do usuário
+consulta = "recuperação de informação"
+
+# 2. Geração do Vetor (Chamada do método desenvolvido)
+vetor = SearchEngine.gerar_vetor_consulta_tfidf(consulta)
+
+# 3. Saída Esperada (Dicionário de pesos)
+# Ex: {'recuper': 1.45, 'inform': 2.10}
+print(vetor)
