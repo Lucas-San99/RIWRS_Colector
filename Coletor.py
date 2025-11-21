@@ -1,6 +1,3 @@
-# ============================================================================== 
-# Coletor.py (NOVO - Launcher Interativo e Modular - CORRIGIDO)
-# ==============================================================================
 import sys
 import os
 import argparse
@@ -38,14 +35,12 @@ except ImportError as e:
 # ==============================================================================
 
 def rodar_coleta():
-    """Executa a Etapa 1: Coleta e pós-processamento."""
     logger.info("ETAPA 1: Iniciando Coleta e Pós-processamento.")
     collection_successful, attempted_urls = processor_main()
     run_post_processing(collection_successful, attempted_urls)
     logger.info("ETAPA 1: Finalizada.")
 
 def rodar_indexacao():
-    """Executa a Etapa 2: Indexação dos documentos coletados."""
     logger.info("ETAPA 2: Iniciando Indexação.")
     log_file_path = get_log_file()  # Obter o path do log dinamicamente
     # A função agora retorna uma tupla de 3 elementos (indice, mapa, erro)
@@ -57,29 +52,22 @@ def rodar_indexacao():
         logger.error(f"ETAPA 2: Falha na indexação. Motivo: {msg_erro}")
 
 def rodar_calculo_idf():
-    """Executa a Etapa 3: Cálculo do IDF."""
     logger.info("ETAPA 3: Iniciando cálculo de IDF.")
     calcula_idf()
     logger.info("ETAPA 3: Cálculo de IDF finalizado.")
 
 def rodar_diagnostico():
-    """Executa um diagnóstico completo (Health Check) do sistema de RI."""
     logger.info("DIAGNÓSTICO: Iniciando verificação de saúde do sistema.")
     health_check_sistema()
     logger.info("DIAGNÓSTICO: Verificação finalizada.")
 
 def rodar_busca_interativa():
-    """Executa a CLI interativa de busca (Etapa 3 - Ana Clara)."""
     logger.info("MODO INTERATIVO DE BUSCA: Iniciando interface CLI.")
     CLI.modo_interativo()
     logger.info("MODO INTERATIVO DE BUSCA: Finalizado.")
 
-# ==============================================================================
-# CONTROLE DE EXECUÇÃO (ARGPARSE E MENU)
-# ==============================================================================
 
 def main():
-    """Ponto de entrada principal que processa argumentos de linha de comando."""
     parser = argparse.ArgumentParser(description="Coletor e Processador de Páginas Web para RIWRS.")
     parser.add_argument(
         '--etapa',
@@ -112,7 +100,6 @@ def main():
         exibir_menu_interativo()
 
 def exibir_menu_interativo():
-    """Exibe um menu interativo para o usuário escolher a ação."""
     def busca_direta_menu():
         termo = input("Digite o termo processado para busca direta: ").strip()
         postings = SearchEngine.buscar_postings_por_termo(termo)
@@ -127,7 +114,6 @@ def exibir_menu_interativo():
             print(f"Termo '{termo}' não encontrado no índice invertido.")
 
     def busca_com_ranking_menu():
-        """Executa busca completa com cálculo de Similaridade do Cosseno (Etapa 3)."""
         termo = input("Digite sua consulta (texto livre): ").strip()
         if not termo:
             print("Consulta vazia. Tente novamente.")
@@ -165,9 +151,9 @@ def exibir_menu_interativo():
         '2': ("Etapa 1: Apenas Coleta e Pós-processamento", rodar_coleta),
         '3': ("Etapa 2: Apenas Indexação", rodar_indexacao),
         '4': ("Etapa 3: Apenas Cálculo de IDF", rodar_calculo_idf),
-        '5': ("Etapa 4: Busca Direta por Termo no Índice Invertido", busca_direta_menu),
-        '6': ("Etapa 5: Busca com Ranking TF-IDF (Similaridade do Cosseno)", busca_com_ranking_menu),
-        '7': ("Etapa 6: Modo Interativo de Busca (CLI)", rodar_busca_interativa),
+        '5': ("Etapa 3: Busca Direta por Termo no Índice Invertido", busca_direta_menu),
+        '6': ("Etapa 3: Busca com Ranking TF-IDF (Similaridade do Cosseno)", busca_com_ranking_menu),
+        '7': ("Etapa 3: Modo Interativo de Busca (CLI)", rodar_busca_interativa),
         '8': ("Verificar Saúde do Sistema (Diagnóstico)", rodar_diagnostico),
         '9': ("Sair", sys.exit)
     }
@@ -189,9 +175,6 @@ def exibir_menu_interativo():
         else:
             logger.warning("Opção inválida. Por favor, tente novamente.")
 
-# ==============================================================================
-# PONTO DE ENTRADA PRINCIPAL
-# ==============================================================================
 if __name__ == '__main__':
     logger.info("Ambiente configurado. Iniciando o launcher.")
     main()
