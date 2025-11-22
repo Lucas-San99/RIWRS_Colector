@@ -1,234 +1,232 @@
 # ==============================================================================
-# src/SearchEngine.py
+# src/SearchEngine.py (VERSÃO COM LOGS TÉCNICOS DETALHADOS)
 # Módulo principal da Etapa 3, responsável pela busca, ranking e mapeamento.
+# Utiliza arquitetura híbrida RAM/SSD e registra detalhes de execução.
 # ==============================================================================
 import os
 import json
-import ijson
 import re
 import math
+import time # Importante para cronometrar o backend
+import gc
 from logging import getLogger
-from Config import LOG_DIR_OUTPUT
+from src.Config import LOG_DIR_OUTPUT 
 from collections import defaultdict
 
 try:
-    from Indexador import STOPWORDS, STEMMER
+    from src.Indexador import STOPWORDS, STEMMER
 except ImportError:
-    # Fallback caso o NLTK não esteja instalado
     print("Aviso: Não foi possível carregar STOPWORDS/STEMMER do Indexador.")
     STOPWORDS = set()
     STEMMER = lambda x: x
 
 logger = getLogger('ColetorLogger')
 
-# Caminho para o arquivo document_map.json (na pasta de logs da raiz do projeto)
+# --- Definição dos Caminhos dos Artefatos ---
 DOCUMENT_MAP_FILE = os.path.join(LOG_DIR_OUTPUT, 'document_map.json')
+IDF_FILE = os.path.join(LOG_DIR_OUTPUT, 'idf.json')
+VOCABULARIO_FILE = os.path.join(LOG_DIR_OUTPUT, 'vocabulario.json') # RAM
+POSTINGS_BIN_FILE = os.path.join(LOG_DIR_OUTPUT, 'postings.bin')   # SSD
 
 class SearchEngine:
-    # Caminho para o arquivo indice_invertido.json (na pasta de logs da raiz do projeto)
-    INDICE_INVERTIDO_FILE = os.path.join(LOG_DIR_OUTPUT, 'indice_invertido.json')
-
-    IDF_FILE = os.path.join(LOG_DIR_OUTPUT, 'idf.json')
-    _idf_map = None
-
-    @classmethod
-    def _carregar_idf_map(cls):
-        """
-        Carrega o mapa de IDF (gerado pelo CalculaIDF.py) em memória.
-        Usa um cache simples para evitar recarregar o arquivo.
-        """
-        if cls._idf_map:
-            return cls._idf_map
+    """
+    Motor de Busca Otimizado com Suporte a Paginação e Logs Detalhados.
+    """
+    def __init__(self):
+        logger.info("[BACKEND INIT] Inicializando SearchEngine híbrido (RAM/SSD)...")
         
-        if not os.path.exists(cls.IDF_FILE):
-            logger.critical(f"Arquivo IDF não encontrado: {cls.IDF_FILE}.")
-            logger.critical("Execute o script 'CalculaIDF.py' primeiro.")
-            return None
+        # 1. Carrega artefatos leves na RAM
+        self.doc_map = self._carregar_json_ram(DOCUMENT_MAP_FILE, "Mapa de Documentos")
+        self.idf_map = self._carregar_json_ram(IDF_FILE, "Mapa IDF global")
+        self.vocabulario = self._carregar_json_ram(VOCABULARIO_FILE, "Vocabulário de Metadados")
 
+        # 2. Abre o arquivo binário gigante no SSD
+        self.postings_handle = None
+        if os.path.exists(POSTINGS_BIN_FILE):
+            try:
+                self.postings_handle = open(POSTINGS_BIN_FILE, 'rb')
+                logger.info(f"[BACKEND INIT] Ponteiro para arquivo binário no SSD aberto com sucesso.")
+            except Exception as e:
+                logger.critical(f"[BACKEND ERROR] Falha ao abrir arquivo binário no SSD: {e}")
+                raise
+        else:
+            logger.critical(f"[BACKEND ERROR] Arquivo binário SSD não encontrado: {POSTINGS_BIN_FILE}")
+            raise
+
+        logger.info("[BACKEND INIT] Inicialização concluída. Pronto para consultas.")
+
+    # ... (Métodos __del__, liberar_memoria_explicitamente e _carregar_json_ram) ...
+    def __del__(self):
+        if self.postings_handle:
+            try: self.postings_handle.close()
+            except: pass
+
+    def liberar_memoria_explicitamente(self):
+        logger.info("[BACKEND SHUTDOWN] Iniciando liberação explícita de memória...")
+        if self.postings_handle:
+            try:
+                self.postings_handle.close()
+                logger.info("[BACKEND SHUTDOWN] Arquivo SSD fechado.")
+            except: pass
+            self.postings_handle = None
+        self.doc_map = None
+        self.idf_map = None
+        self.vocabulario = None
+        collected = gc.collect()
+        logger.info(f"[BACKEND SHUTDOWN] Limpeza concluída. Garbage Collector liberou {collected} objetos da RAM.")
+
+    def _carregar_json_ram(self, path, descricao):
+        if not os.path.exists(path):
+             logger.critical(f"[BACKEND ERROR] Artefato obrigatório não encontrado: {path}")
+             return {}
         try:
-            with open(cls.IDF_FILE, 'r', encoding='utf-8') as f:
-                cls._idf_map = json.load(f)
-            logger.info(f"Mapa IDF carregado com {len(cls._idf_map)} termos.")
-            return cls._idf_map
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            logger.info(f"[RAM LOAD] {descricao} carregado na memória ({len(data)} entradas).")
+            return data
         except Exception as e:
-            logger.critical(f"Falha ao carregar ou processar {cls.IDF_FILE}: {e}")
-            return None
+             logger.critical(f"[RAM LOAD ERROR] Erro ao carregar {descricao}: {e}")
+             return {}
 
+    # ... (Métodos _processar_texto_query e gerar_vetor_consulta_tfidf) ...
     @staticmethod
     def _processar_texto_query(texto_query: str):
-        """
-        Aplica O MESMO pipeline de processamento do Indexador (Etapa 2.1)
-        a uma string de consulta (que não contém HTML).
-        
-        Esta é uma cópia da lógica de Indexador.limpar_e_tokenizar,
-        mas pulando a etapa de extração de HTML (BeautifulSoup).
-        """
-        
-        # 1. Normalização (copiado de Indexador.py)
-        # Mantém letras e acentos, remove pontuação/números, e .lower()
         limpo = re.sub(r'[^a-zA-ZáéíóúàèìòùãõâêîôûçÁÉÍÓÚÀÈÌÒÙÃÕÂÊÎÔÛÇ\s]', '', texto_query).lower()
-        
-        # 2. Tokenização (copiado de Indexador.py)
         tokens = limpo.split()
-        
         tokens_processados = []
         for token in tokens:
-            # 3. Filtra stopwords e tokens curtos (copiado de Indexador.py)
             if token not in STOPWORDS and len(token) > 2:
-                # 4. Stemming (copiado de Indexador.py)
                 tokens_processados.append(STEMMER.stem(token))
-        
         return tokens_processados
 
-    @classmethod
-    def buscar_postings_por_termo(cls, termo_processado):
-        """
-        Tarefa de Luana Mateus: Busca direta no índice invertido.
-        Dado um termo processado (após limpeza/stemming), retorna a lista de DocIDs e suas frequências (TF).
+    def gerar_vetor_consulta_tfidf(self, query_string: str):
+        tokens_processados = self._processar_texto_query(query_string)
+        if not tokens_processados: return {}
+        tf_consulta = defaultdict(int)
+        for token in tokens_processados:
+            tf_consulta[token] += 1
+        vetor_tfidf = {}
+        for termo, tf in tf_consulta.items():
+            idf = self.idf_map.get(termo, 0)
+            if idf > 0:
+                vetor_tfidf[termo] = tf * idf
+        return vetor_tfidf
 
-        :param termo_processado: Termo já processado (string)
-        :return: Dicionário {doc_id: tf, ...} ou None se termo não encontrado
-        Exemplo de uso:
-            postings = SearchEngine.buscar_postings_por_termo('log')
-            if postings:
-                print(postings)  # {"123": 5, "456": 2, ...}
-        """
-        if not os.path.exists(cls.INDICE_INVERTIDO_FILE):
-            logger.critical(f"Arquivo de índice invertido não encontrado em: {cls.INDICE_INVERTIDO_FILE}. A indexação deve ser rodada primeiro.")
-            return None
+    # ==========================================================================
+    # MÉTODOS COM LOGS TÉCNICOS APRIMORADOS
+    # ==========================================================================
+    
+    def buscar_postings_por_termo(self, termo_processado):
+        """Busca no SSD com log explícito da operação de I/O."""
+        metadata = self.vocabulario.get(termo_processado)
+        if not metadata: return None
+        
+        offset = metadata.get('offset')
+        length = metadata.get('length')
+        if offset is None or length is None: return None
 
         try:
-            with open(cls.INDICE_INVERTIDO_FILE, 'r', encoding='utf-8') as f:
-                # Busca incremental usando ijson para não carregar tudo na memória
-                for termo, termo_info in ijson.kvitems(f, ''):
-                    if termo == termo_processado:
-                        if 'postings' in termo_info:
-                            return termo_info['postings']
-                        else:
-                            logger.info(f"Termo '{termo_processado}' não possui postings no índice.")
-                            return None
-                logger.info(f"Termo '{termo_processado}' não encontrado no índice.")
-                return None
+            # Registra o acesso cirúrgico ao SSD
+            logger.debug(f"[SSD I/O] Realizando seek/read para o termo '{termo_processado}' (Offset: {offset}, Bytes: {length})")
+            
+            self.postings_handle.seek(offset)
+            bin_data = self.postings_handle.read(length)
+            postings_dict_str = bin_data.decode('utf-8')
+            postings_dict = json.loads(postings_dict_str)
+            return {int(k): v for k, v in postings_dict.items()}
         except Exception as e:
-            logger.critical(f"Erro ao buscar termo no indice_invertido.json: {e}")
-            return None
+             logger.error(f"[SSD I/O ERROR] Falha ao ler postings para '{termo_processado}': {e}")
+             return None
 
-    @classmethod
-    def mapear_resultados_para_urls(cls, doc_ids: list):
-        """
-        Tarefa de Lucas Lima: Recebe uma lista de DocIDs e retorna a lista de URLs originais.
-        
-        :param doc_ids: Lista de DocIDs (inteiros) ranqueados.
-        :return: Lista de URLs correspondentes (strings).
-        """
-        doc_map = cls.carregar_document_map()
-        
-        if doc_map is None:
-            # Não pode mapear se o mapa não foi carregado
-            return []
-
+    def mapear_resultados_para_urls(self, doc_ids: list):
+        if not self.doc_map: return []
         urls_ranqueadas = []
         for doc_id in doc_ids:
-            # Usa .get() para evitar KeyErrors se o DocID for inválido/inexistente
-            url = doc_map.get(doc_id)
-            if url:
-                urls_ranqueadas.append(url)
-            # Nota: Não logamos o erro aqui, pois é trabalho do teste confirmar se ele ignora DocIDs ruins.
-        
+            url = self.doc_map.get(str(doc_id))
+            if url: urls_ranqueadas.append(url)
         return urls_ranqueadas
 
     @staticmethod
     def similaridade_cosseno(vetor1: dict, vetor2: dict) -> float:
-        """
-        Tarefa de Ana Paula: Calcula a Similaridade do Cosseno entre dois vetores TF-IDF.
-        Cada vetor deve ser um dicionário {termo: peso_TF_IDF}.
-        """
+        # (Cálculo matemático puro)
         numerador = sum(vetor1[t] * vetor2[t] for t in vetor1 if t in vetor2)
         norma1 = math.sqrt(sum(p ** 2 for p in vetor1.values()))
         norma2 = math.sqrt(sum(p ** 2 for p in vetor2.values()))
-        if norma1 == 0 or norma2 == 0:
-            return 0.0
+        if norma1 == 0 or norma2 == 0: return 0.0
         return numerador / (norma1 * norma2)
 
-    @classmethod
-    def calcular_pesos_tf_idf(cls, termos_tf: dict, idf_map: dict) -> dict:
+    def ranquear_documentos_completo(self, consulta_tfidf: dict):
         """
-        Retorna o vetor TF-IDF aplicando o IDF correspondente a cada termo.
+        Realiza o ranking completo com logs do mecanismo e tempo de processamento.
         """
-        return {t: tf * idf_map.get(t, 0.0) for t, tf in termos_tf.items()}
-
-    @classmethod
-    def ranquear_documentos(cls, consulta_tf: dict, indice_invertido: dict, idf_map: dict, limite: int = 10):
-        """
-        Ranqueia documentos com base na Similaridade do Cosseno entre
-        o vetor TF-IDF da consulta e os vetores TF-IDF dos documentos..
-        """
-        logger.info("Iniciando cálculo de ranking via Similaridade do Cosseno...")
-
-        consulta_tfidf = cls.calcular_pesos_tf_idf(consulta_tf, idf_map)
-
-        documentos_vetores = {}
-        for termo, peso_consulta in consulta_tfidf.items():
-            if termo not in indice_invertido:
-                continue
-            for doc_id, tf_doc in indice_invertido[termo].items():
-                if doc_id not in documentos_vetores:
-                    documentos_vetores[doc_id] = {}
-                documentos_vetores[doc_id][termo] = tf_doc * idf_map.get(termo, 0.0)
-
-        scores = {
-            int(doc_id): cls.similaridade_cosseno(consulta_tfidf, vetor_doc)
-            for doc_id, vetor_doc in documentos_vetores.items()
-        }
-
-        ranking_ordenado = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-        logger.info(f"Ranking concluído. {len(ranking_ordenado)} documentos ranqueados.")
-        return ranking_ordenado[:limite]
-
-    @classmethod
-    def gerar_vetor_consulta_tfidf(cls, query_string: str):
-        """
-        Módulo que recebe a string de consulta do usuário, 
-        aplica o mesmo pipeline de Limpeza/Stemming/Stopwords e 
-        gera o vetor de features TF-IDF para a busca.
-
-        :param query_string: A busca do usuário
-        :return: Dicionário com o vetor de pesos.
-        """
+        # Registra o início e o método de ranking
+        logger.info(f"[RANKING START] Iniciando ranking vetorial (Mecanismo: TF-IDF + Similaridade do Cosseno). Termos na consulta: {len(consulta_tfidf)}")
         
-        # 1. Carregar o mapa IDF (usa cache)
-        idf_map = cls._carregar_idf_map()
-        if idf_map is None:
-            logger.error("Não é possível gerar o vetor da consulta, o mapa IDF não está disponível.")
-            return {}
+        # Cronometra o tempo de processamento interno
+        start_cpu_time = time.process_time()
+        start_wall_time = time.time()
 
-        # 2. Aplicar o pipeline de processamento
-        tokens_processados = cls._processar_texto_query(query_string)
-        
-        if not tokens_processados:
-            logger.warning(f"Consulta '{query_string}' resultou em zero tokens após processamento.")
-            return {}
+        documentos_candidatos = {}
 
-        # 3. Calcular o TF (Term Frequency) da consulta
-        tf_consulta = defaultdict(int)
-        for token in tokens_processados:
-            tf_consulta[token] += 1
+        # 1. Fase de Recuperação (SSD -> RAM)
+        logger.info("[RANKING PHASE 1] Recuperando postings lists do SSD...")
+        termos_recuperados = 0
+        for termo in consulta_tfidf.keys():
+            postings = self.buscar_postings_por_termo(termo)
+            if not postings: continue
+            termos_recuperados += 1
+            idf_termo = self.idf_map.get(termo, 0)
+            for doc_id, tf in postings.items():
+                if doc_id not in documentos_candidatos:
+                    documentos_candidatos[doc_id] = {}
+                documentos_candidatos[doc_id][termo] = tf * idf_termo
+
+        if not documentos_candidatos:
+            logger.info("[RANKING END] Nenhum documento candidato encontrado nas postings lists.")
+            return []
+
+        # 2. Fase de Cálculo de Similaridade (RAM)
+        logger.info(f"[RANKING PHASE 2] Calculando similaridade na RAM para {len(documentos_candidatos)} documentos candidatos...")
+        scores = []
+        for doc_id, vetor_doc in documentos_candidatos.items():
+            score = self.similaridade_cosseno(consulta_tfidf, vetor_doc)
+            if score > 0:
+                scores.append((doc_id, score))
+
+        # 3. Ordenação Completa
+        ranking_ordenado = sorted(scores, key=lambda x: x[1], reverse=True)
         
-        # 4. Calcular o peso TF-IDF para cada termo na consulta
-        vetor_tfidf = {}
+        end_cpu_time = time.process_time()
+        end_wall_time = time.time()
+        cpu_duration = end_cpu_time - start_cpu_time
+        wall_duration = end_wall_time - start_wall_time
         
-        for termo, tf in tf_consulta.items():
+        # Resumo final do processamento do backend
+        logger.info(f"[RANKING END] Concluído. Docs ranqueados: {len(ranking_ordenado)}. Tempo Backend (Wall): {wall_duration:.4f}s, (CPU): {cpu_duration:.4f}s.")
+        logger.info(f"[RANKING SUMMARY] Dados recuperados do SSD (Postings de {termos_recuperados} termos) e processados na RAM (Vetores e Cosseno).")
+        
+        return ranking_ordenado
+
+    def buscar(self, query_string: str, pagina: int = 1, resultados_por_pagina: int = 10):
+        # (Método fachada, a lógica pesada está no ranquear_documentos_completo)
+        vetor_query = self.gerar_vetor_consulta_tfidf(query_string)
+        if not vetor_query: return [], 0
+        
+        ranking_completo = self.ranquear_documentos_completo(vetor_query)
+        total_resultados = len(ranking_completo)
+        
+        if total_resultados == 0:
+            return [], 0
             
-            # Pega o IDF pré-calculado do mapa
-            idf = idf_map.get(termo, 0)
-            
-            # Se idf == 0, o termo não está em nenhum documento
-            # (ou não estava no índice), então seu peso na busca é 0.
-            if idf > 0:
-                # W_t,q = TF_t,q * IDF_t
-                # (Estamos usando TF bruto * IDF)
-                peso = tf * idf
-                vetor_tfidf[termo] = peso
+        inicio = (pagina - 1) * resultados_por_pagina
+        fim = inicio + resultados_por_pagina
+        ranking_paginado = ranking_completo[inicio:fim]
         
-        logger.info(f"Consulta '{query_string}' -> Vetor TF-IDF: {vetor_tfidf}")
-        return vetor_tfidf
+        doc_ids_pagina = [doc_id for doc_id, score in ranking_paginado]
+        urls_pagina = self.mapear_resultados_para_urls(doc_ids_pagina)
+        
+        resultados_finais_pagina = []
+        for i in range(len(ranking_paginado)):
+             resultados_finais_pagina.append((ranking_paginado[i][0], ranking_paginado[i][1], urls_pagina[i]))
+             
+        return resultados_finais_pagina, total_resultados
