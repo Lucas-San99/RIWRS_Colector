@@ -106,8 +106,7 @@ def main():
     parser.add_argument(
         '--etapa',
         type=str,
-        # Adicionada a opção 'compressao'
-        choices=['coleta', 'indexacao', 'idf', 'migracao', 'diagnostico', 'compressao', 'busca_cli', 'busca_gui', 'todas'],
+        choices=['coleta', 'indexacao', 'idf', 'migracao', 'diagnostico', 'busca_cli', 'busca_gui', 'todas'],
         help="Especifica a etapa a ser executada."
     )
 
@@ -148,7 +147,6 @@ def exibir_menu_interativo():
         '5': ("Etapa 4: Migração/Otimização do Índice (Geração RAM/SSD)", rodar_migracao),
         '6': ("BUSCA: Interface de Linha de Comando (CLI)", rodar_busca_cli),
         '7': ("BUSCA: Interface Gráfica (GUI)", rodar_busca_gui),
-        # Opções de Ferramentas atualizadas
         '8': ("Ferramentas: Verificar Saúde do Sistema (Diagnóstico)", rodar_diagnostico),
         '0': ("Sair", sys.exit)
     }
