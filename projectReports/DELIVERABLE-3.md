@@ -544,3 +544,115 @@ vetor = SearchEngine.gerar_vetor_consulta_tfidf(consulta)
 # 3. Saída Esperada (Dicionário de pesos)
 # Ex: {'recuper': 1.45, 'inform': 2.10}
 print(vetor)
+```
+---
+
+**Autor:** 
+Lucas Lima @Lucas-San99
+Data da atualização: 21/11/2025
+
+# Implementação da Lógica de Paginação, Mapeamento e Gerenciamento de Memória (Backend)
+
+### Objetivo
+
+O motor de ranking bruto retorna uma lista extensa de identificadores numéricos (DocIDs) e seus scores. O objetivo desta implementação foi refinar essa saída bruta no backend (`SearchEngine.py`) para torná-la consumível pelos frontends (CLI e GUI). Isso envolveu três tarefas críticas: traduzir DocIDs de volta para URLs, implementar a lógica de paginação (fatiamento de resultados) no servidor e criar mecanismos explícitos de gerenciamento de memória para evitar vazamentos de recursos durante o ciclo de vida da aplicação.
+
+### Implementação
+
+As implementações foram realizadas na classe central `SearchEngine` em `src/SearchEngine.py`.
+
+#### 1\. Mapeamento Eficiente (DocID $\rightarrow$ URL)
+
+Foi desenvolvido o método `mapear_resultados_para_urls(doc_ids)`.
+
+  * **Funcionamento:** O método recebe uma lista de inteiros (DocIDs) retornados pelo processo de ranking. Ele utiliza o dicionário `self.doc_map` (carregado em RAM na inicialização a partir do `document_map.json`) para realizar a tradução.
+  * **Desempenho:** Como o mapa está inteiramente na memória RAM como uma tabela hash, a busca por cada URL tem complexidade de tempo O(1), garantindo que esta etapa não adicione latência perceptível ao processo de busca, mesmo para milhares de resultados.
+
+#### 2\. Lógica Central de Paginação (`buscar`)
+
+O método principal de fachada `buscar` foi refatorado para suportar paginação no backend.
+
+  * **Assinatura Anterior:** `buscar(query_string)` retornando os top-10 fixos.
+  * **Nova Assinatura:** `buscar(query_string, pagina=1, resultados_por_pagina=10)`
+  * **Fluxo:**
+    1.  Recebe a consulta e os parâmetros de página.
+    2.  Chama o método de ranking completo (implementado por Ana Paula) para obter *todos* os resultados possíveis ordenados.
+    3.  Calcula os índices de fatiamento (slice) com base na página solicitada:
+          * `inicio = (pagina - 1) * resultados_por_pagina`
+          * `fim = inicio + resultados_por_pagina`
+    4.  Aplica o fatiamento à lista completa de resultados.
+    5.  Chama o método de mapeamento apenas para os DocIDs da página atual.
+    6.  **Retorno:** Retorna uma tupla contendo a lista paginada e o total geral de resultados: `(resultados_da_pagina, total_encontrado)`.
+
+#### 3\. Gerenciamento Explícito de Memória
+
+Devido à arquitetura híbrida que mantém grandes estruturas na RAM (vocabulário e mapas), foi identificado um problema de vazamento de memória (*memory leak*) quando a interface gráfica era aberta e fechada múltiplas vezes.
+
+  * **Solução:** Implementação do método `liberar_memoria_explicitamente()`.
+  * **Funcionamento:** Este método é chamado pelos frontends (especificamente a GUI) no momento do fechamento da aplicação. Ele realiza duas ações críticas:
+    1.  Fecha explicitamente o descritor de arquivo (`file handle`) do índice binário no SSD (`self.postings_handle.close()`).
+    2.  Define as referências dos grandes dicionários em RAM (`self.doc_map`, `self.vocabulario`, etc.) como `None` e invoca manualmente o Garbage Collector do Python (`gc.collect()`) para forçar a liberação imediata da memória alocada.
+
+### Fluxo da Nova Metodologia `buscar`
+
+```
+┌───────────────────────────┐
+│ Entrada: Query, Pág, Limit│
+└─────────────┬─────────────┘
+              │
+              ▼
+┌───────────────────────────┐
+│ 1. Gerar Vetor TF-IDF     │
+└─────────────┬─────────────┘
+              │
+              ▼
+┌───────────────────────────┐
+│ 2. Ranking Completo (RAM) │
+│ - Retorna lista gigante   │
+│   de [(DocID, Score),...] │
+└─────────────┬─────────────┘
+              │
+              ▼
+┌───────────────────────────┐
+│ 3. Lógica de Paginação    │
+│ - Calcular slices         │
+│ - Fatiar a lista gigante  │
+└─────────────┬─────────────┘
+              │
+              ▼
+┌───────────────────────────┐
+│ 4. Mapeamento (RAM)       │
+│ - Traduzir DocIDs da fatia│
+│   para URLs usando doc_map│
+└─────────────┬─────────────┘
+              │
+              ▼
+┌───────────────────────────┐
+│ Saída: (Resultados        |
+| Paginados, Total Geral)   |
+└───────────────────────────┘
+```
+
+### Como Usar (Exemplo Programático)
+
+O uso principal se dá através das interfaces CLI e GUI, mas o método pode ser invocado diretamente:
+
+```python
+from src.SearchEngine import SearchEngine
+
+# Inicializa o motor (carrega mapas na RAM)
+engine = SearchEngine()
+
+# Busca a segunda página, com 20 resultados por página
+query = "recuperar senha nubank"
+resultados_pag_2, total_geral = engine.buscar(query, pagina=2, resultados_por_pagina=20)
+
+print(f"Total de documentos encontrados para a query: {total_geral}")
+print(f"Exibindo {len(resultados_pag_2)} resultados da página 2:")
+
+for doc_id, score, url in resultados_pag_2:
+    print(f" - [{score:.4f}] {url}")
+
+# Ao finalizar, liberar recursos
+engine.liberar_memoria_explicitamente()
+```
