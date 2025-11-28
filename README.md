@@ -1,9 +1,3 @@
-Compreendo perfeitamente. Você quer um documento que vá além do superficial e explique o *funcionamento* e a *arquitetura* do sistema, não apenas como rodá-lo.
-
-Abaixo está uma versão do `README.md` significativamente mais detalhada, focada nos aspectos técnicos, no fluxo de dados e na arquitetura da solução implementada.
-
------
-
 # Sistema de Recuperação de Informação para URLs de Phishing (RIWRS)
 
 Este projeto é uma implementação completa de um sistema de Recuperação de Informação (RI) focado no domínio de segurança (URLs de *phishing*). O sistema opera de ponta a ponta, desde a coleta distribuída de páginas web até a disponibilização de um motor de busca com ranqueamento semântico.
